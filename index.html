@@ -165,6 +165,21 @@
   .order-item:hover{ background:var(--surface-2); }
   .order-item.active{ background:var(--accent-soft); color:var(--accent-strong); font-weight:600; }
   .order-item.drag-over{ outline:2px dashed var(--accent); outline-offset:-2px; }
+  .order-item-block{ margin-bottom:2px; }
+  .order-item-chevron{
+    background:none; border:none; color:var(--muted); font-size:12px; padding:2px 4px; flex-shrink:0;
+  }
+  .order-item-chevron:hover{ color:var(--accent); }
+  .order-submenu{
+    display:none; flex-wrap:wrap; gap:6px; padding:8px 6px 8px 18px;
+  }
+  .order-submenu.open{ display:flex; }
+  .order-chip{
+    font-size:12px; padding:5px 10px; border-radius:999px; border:var(--card-border);
+    background:var(--surface-2); color:var(--muted);
+  }
+  [data-theme="pixel"] .order-chip{ border-radius:0; }
+  .order-chip.active{ background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600; }
 
   main{ padding:20px clamp(14px,4vw,40px) 80px; }
 
@@ -251,6 +266,16 @@
     align-items:center; justify-content:center; z-index:100; padding:20px;
   }
   .overlay.open{ display:flex; }
+
+  .poster-overlay{ padding:0; }
+  .poster-overlay img{
+    max-width:90vw; max-height:85vh; object-fit:contain; border-radius:10px;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  .poster-overlay #posterLightboxEmpty{
+    background:var(--surface); color:var(--text); padding:24px 30px; border-radius:var(--card-radius);
+    border:var(--card-border); font-size:14px; max-width:80vw; text-align:center;
+  }
   .modal{
     background:var(--surface); border:var(--card-border); border-radius:var(--card-radius);
     width:100%; max-width:520px; max-height:88vh; overflow-y:auto; padding:22px;
@@ -449,6 +474,12 @@
   </div>
 </div>
 
+<!-- Lightbox de portada grande -->
+<div class="overlay poster-overlay" id="posterLightbox">
+  <img id="posterLightboxImg" style="display:none;">
+  <div id="posterLightboxEmpty" style="display:none;">Esta película no tiene portada cargada.</div>
+</div>
+
 <!-- Modal claves API -->
 <div class="overlay" id="apiKeysOverlay">
   <div class="modal" style="max-width:420px;">
@@ -510,7 +541,9 @@
     tabOrder: ["alfabetico","genero","actor","duracion","libre"],
     activeTab: "alfabetico",
     showFavoritesOnly: false,
-    freeOrder: []
+    freeOrder: [],
+    genreFilter: null,
+    durationFilter: null
   });
 
   let editingId = null;
@@ -588,27 +621,63 @@
   });
 
   // ============ MENU "ORDENAR" ============
+  const DURATION_OPTIONS = [
+    {key:"90", label:"1:30+"},
+    {key:"120", label:"2:00+"},
+    {key:"150", label:"2:30+"},
+    {key:"180", label:"3:00+"}
+  ];
+
   function renderOrderMenu(){
     const orderBtn = document.getElementById("orderBtn");
-    orderBtn.textContent = "Ordenar: " + SORT_LABELS[ui.activeTab] + " ▾";
+    let label = "Ordenar: " + SORT_LABELS[ui.activeTab];
+    if(ui.activeTab === "genero" && ui.genreFilter) label += " · " + ui.genreFilter;
+    if(ui.activeTab === "duracion" && ui.durationFilter){
+      const opt = DURATION_OPTIONS.find(o=>o.key===ui.durationFilter);
+      if(opt) label += " · " + opt.label;
+    }
+    orderBtn.textContent = label + " ▾";
 
     const menu = document.getElementById("orderMenu");
     menu.innerHTML = '<div class="order-hint">Arrastrá para reordenar las opciones</div>';
     ui.tabOrder.forEach(tabId=>{
       const item = document.createElement("div");
-      item.className = "order-item" + (ui.activeTab===tabId ? " active":"");
-      item.textContent = SORT_LABELS[tabId];
-      item.draggable = true;
+      item.className = "order-item-block";
       item.dataset.tabId = tabId;
-      item.addEventListener("click", ()=>{
+
+      const row = document.createElement("div");
+      row.className = "order-item" + (ui.activeTab===tabId ? " active":"");
+      row.draggable = true;
+
+      const labelSpan = document.createElement("span");
+      labelSpan.textContent = SORT_LABELS[tabId];
+      labelSpan.style.flex = "1";
+      row.appendChild(labelSpan);
+
+      const hasFilter = (tabId === "genero" || tabId === "duracion");
+      if(hasFilter){
+        const chev = document.createElement("button");
+        chev.type = "button";
+        chev.className = "order-item-chevron";
+        chev.textContent = "▸";
+        chev.addEventListener("click", (e)=>{
+          e.stopPropagation();
+          const sub = item.querySelector(".order-submenu");
+          const isOpen = sub.classList.toggle("open");
+          chev.textContent = isOpen ? "▾" : "▸";
+        });
+        row.appendChild(chev);
+      }
+
+      row.addEventListener("click", ()=>{
         ui.activeTab = tabId; saveUI();
         closeOrderMenu(); renderAll();
       });
-      item.addEventListener("dragstart", e=>{ e.dataTransfer.setData("text/plain", tabId); });
-      item.addEventListener("dragover", e=>{ e.preventDefault(); item.classList.add("drag-over"); });
-      item.addEventListener("dragleave", ()=> item.classList.remove("drag-over"));
-      item.addEventListener("drop", e=>{
-        e.preventDefault(); item.classList.remove("drag-over");
+      row.addEventListener("dragstart", e=>{ e.dataTransfer.setData("text/plain", tabId); });
+      row.addEventListener("dragover", e=>{ e.preventDefault(); row.classList.add("drag-over"); });
+      row.addEventListener("dragleave", ()=> row.classList.remove("drag-over"));
+      row.addEventListener("drop", e=>{
+        e.preventDefault(); row.classList.remove("drag-over");
         const draggedId = e.dataTransfer.getData("text/plain");
         if(draggedId === tabId) return;
         const from = ui.tabOrder.indexOf(draggedId);
@@ -617,6 +686,62 @@
         ui.tabOrder.splice(to,0,draggedId);
         saveUI(); renderOrderMenu();
       });
+      item.appendChild(row);
+
+      if(tabId === "genero"){
+        const sub = document.createElement("div");
+        sub.className = "order-submenu";
+        const allChip = document.createElement("div");
+        allChip.className = "order-chip" + (!ui.genreFilter ? " active" : "");
+        allChip.textContent = "Todos";
+        allChip.addEventListener("click", (e)=>{
+          e.stopPropagation();
+          ui.genreFilter = null; ui.activeTab = "genero"; saveUI();
+          closeOrderMenu(); renderAll();
+        });
+        sub.appendChild(allChip);
+        allGenres().forEach(g=>{
+          const chip = document.createElement("div");
+          chip.className = "order-chip" + (ui.genreFilter===g ? " active" : "");
+          chip.textContent = g;
+          chip.addEventListener("click", (e)=>{
+            e.stopPropagation();
+            ui.genreFilter = (ui.genreFilter===g) ? null : g;
+            ui.activeTab = "genero"; saveUI();
+            closeOrderMenu(); renderAll();
+          });
+          sub.appendChild(chip);
+        });
+        item.appendChild(sub);
+      }
+
+      if(tabId === "duracion"){
+        const sub = document.createElement("div");
+        sub.className = "order-submenu";
+        const allChip = document.createElement("div");
+        allChip.className = "order-chip" + (!ui.durationFilter ? " active" : "");
+        allChip.textContent = "Todas";
+        allChip.addEventListener("click", (e)=>{
+          e.stopPropagation();
+          ui.durationFilter = null; ui.activeTab = "duracion"; saveUI();
+          closeOrderMenu(); renderAll();
+        });
+        sub.appendChild(allChip);
+        DURATION_OPTIONS.forEach(opt=>{
+          const chip = document.createElement("div");
+          chip.className = "order-chip" + (ui.durationFilter===opt.key ? " active" : "");
+          chip.textContent = opt.label;
+          chip.addEventListener("click", (e)=>{
+            e.stopPropagation();
+            ui.durationFilter = (ui.durationFilter===opt.key) ? null : opt.key;
+            ui.activeTab = "duracion"; saveUI();
+            closeOrderMenu(); renderAll();
+          });
+          sub.appendChild(chip);
+        });
+        item.appendChild(sub);
+      }
+
       menu.appendChild(item);
     });
 
@@ -733,7 +858,7 @@
     `;
     card.addEventListener("click", (e)=>{
       if(e.target.closest(".card-actions")) return;
-      openMovieModal(m.id);
+      openPosterLightbox(m);
     });
     card.querySelector('[data-act="fav"]').addEventListener("click", (e)=>{
       e.stopPropagation();
@@ -778,7 +903,20 @@
     const q = document.getElementById("searchInput").value.trim();
     let list = movies.filter(m=> matchesSearch(m,q));
     if(ui.showFavoritesOnly) list = list.filter(m=>m.favorite);
+    if(ui.genreFilter){
+      list = list.filter(m=> (m.genres||[]).some(g=> normText(g) === normText(ui.genreFilter)));
+    }
+    if(ui.durationFilter){
+      const min = parseInt(ui.durationFilter);
+      list = list.filter(m=> (m.duration||0) >= min);
+    }
     return list;
+  }
+
+  function allGenres(){
+    const set = new Set();
+    movies.forEach(m=> (m.genres||[]).forEach(g=>{ if(g.trim()) set.add(g.trim()); }));
+    return [...set].sort((a,b)=> a.localeCompare(b,'es'));
   }
 
   function renderAll(){
@@ -814,6 +952,11 @@
       return;
     }
     if(mode === "genero"){
+      if(ui.genreFilter){
+        const sorted = [...list].sort((a,b)=> titleOf(a).localeCompare(titleOf(b),'es'));
+        main.appendChild(buildGrid(sorted));
+        return;
+      }
       const groups = {};
       list.forEach(m=>{
         (m.genres && m.genres.length ? m.genres : ["Sin género"]).forEach(g=>{
@@ -1300,6 +1443,24 @@
   }
   document.getElementById("closeConnBtn").addEventListener("click", ()=> connOverlay.classList.remove("open"));
   connOverlay.addEventListener("click", e=>{ if(e.target===connOverlay) connOverlay.classList.remove("open"); });
+
+  // ============ LIGHTBOX DE PORTADA GRANDE ============
+  const posterLightbox = document.getElementById("posterLightbox");
+  function openPosterLightbox(m){
+    const img = document.getElementById("posterLightboxImg");
+    const empty = document.getElementById("posterLightboxEmpty");
+    if(m.poster){
+      img.src = m.poster;
+      img.alt = "Portada de " + titleOf(m);
+      img.style.display = "block";
+      empty.style.display = "none";
+    } else {
+      img.style.display = "none";
+      empty.style.display = "block";
+    }
+    posterLightbox.classList.add("open");
+  }
+  posterLightbox.addEventListener("click", ()=> posterLightbox.classList.remove("open"));
 
   // ============ INIT ============
   applyThemeUI();
