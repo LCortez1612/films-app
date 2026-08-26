@@ -167,7 +167,9 @@
   .order-item.drag-over{ outline:2px dashed var(--accent); outline-offset:-2px; }
   .order-item-block{ margin-bottom:2px; }
   .order-item-chevron{
-    background:none; border:none; color:var(--muted); font-size:12px; padding:2px 4px; flex-shrink:0;
+    background:none; border:none; color:var(--muted); font-size:36px; line-height:1;
+    padding:6px 10px; flex-shrink:0; min-width:44px; min-height:44px;
+    display:flex; align-items:center; justify-content:center;
   }
   .order-item-chevron:hover{ color:var(--accent); }
   .order-submenu{
@@ -204,26 +206,28 @@
     width:100%; aspect-ratio:2/3; display:flex; align-items:center; justify-content:center;
     background:var(--surface-2); color:var(--muted); font-size:28px;
   }
-  .card-top{ padding:14px 14px 10px; flex:1; }
+  .card-top{ padding:12px 14px 8px; flex:1; }
   .card-title{ font-family:var(--font-display); font-size:15px; line-height:1.3; margin-bottom:4px; }
   [data-theme="pixel"] .card-title{ font-size:11px; line-height:1.6; }
-  .card-meta{ font-size:12px; color:var(--muted); margin-bottom:8px; }
-  .pills{ display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; }
+  .card-topline{ display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--muted); margin-bottom:6px; }
+  .card-meta{ font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .genre-rating-row{ display:flex; align-items:center; flex-wrap:wrap; gap:6px 8px; }
+  .pills{ display:flex; flex-wrap:wrap; gap:5px; }
   .pill{
     font-size:11px; padding:3px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent-strong);
   }
   [data-theme="pixel"] .pill{ border-radius:0; }
-  .rating-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-  .stars{ display:flex; }
-  .star{ width:16px; height:16px; cursor:pointer; }
-  .score-num{ font-size:12px; color:var(--muted); }
+  .stars{ display:flex; flex-shrink:0; }
+  .star{ width:15px; height:15px; cursor:pointer; }
+  .score-nums{ display:flex; align-items:center; gap:6px; flex-shrink:0; margin-left:auto; }
+  .score-num{ font-size:12px; color:var(--muted); white-space:nowrap; }
   .imdb-badge{ font-size:11px; font-weight:600; color:#000; background:#F5C518; padding:2px 6px; border-radius:3px; }
 
   .card-actions{
     display:flex; border-top:var(--card-border); background:var(--surface-2);
   }
   .card-actions button{
-    flex:1; background:none; border:none; color:var(--muted); padding:9px 4px; font-size:15px;
+    flex:1; background:none; border:none; color:var(--muted); padding:6px 4px; font-size:13px;
     border-right:var(--card-border);
   }
   .card-actions button:last-child{ border-right:none; }
@@ -231,7 +235,7 @@
   .card-actions button.on{ color:var(--accent); }
 
   .watched-flag{
-    font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600;
+    font-size:11px; padding:2px 7px; border-radius:999px; font-weight:600;
   }
   .watched-flag.si{ background:var(--accent); color:var(--on-accent); }
   .watched-flag.no{ background:var(--surface-2); color:var(--muted); border:var(--card-border); }
@@ -515,8 +519,11 @@
     genero: "Género",
     actor: "Actor",
     duracion: "Duración",
+    vista: "Vista/No vista",
+    puntaje: "Puntaje",
     libre: "Estantería libre"
   };
+  const ALL_SORT_IDS = Object.keys(SORT_LABELS);
 
   let movies = load(STORE_KEY, []);
 
@@ -538,13 +545,16 @@
     theme: "nordico",
     palette: "vino",
     lang: "es",
-    tabOrder: ["alfabetico","genero","actor","duracion","libre"],
+    tabOrder: ["alfabetico","genero","actor","duracion","vista","puntaje","libre"],
     activeTab: "alfabetico",
     showFavoritesOnly: false,
     freeOrder: [],
     genreFilter: null,
-    durationFilter: null
+    durationFilter: null,
+    watchedFilter: null
   });
+  // Por si el dispositivo ya tenía guardado un orden viejo sin los modos nuevos
+  ALL_SORT_IDS.forEach(id=>{ if(!ui.tabOrder.includes(id)) ui.tabOrder.push(id); });
 
   let editingId = null;
 
@@ -636,6 +646,9 @@
       const opt = DURATION_OPTIONS.find(o=>o.key===ui.durationFilter);
       if(opt) label += " · " + opt.label;
     }
+    if(ui.activeTab === "vista" && ui.watchedFilter){
+      label += " · " + (ui.watchedFilter === "true" ? "Vista" : "No vista");
+    }
     orderBtn.textContent = label + " ▾";
 
     const menu = document.getElementById("orderMenu");
@@ -654,7 +667,7 @@
       labelSpan.style.flex = "1";
       row.appendChild(labelSpan);
 
-      const hasFilter = (tabId === "genero" || tabId === "duracion");
+      const hasFilter = (tabId === "genero" || tabId === "duracion" || tabId === "vista");
       if(hasFilter){
         const chev = document.createElement("button");
         chev.type = "button";
@@ -735,6 +748,29 @@
             e.stopPropagation();
             ui.durationFilter = (ui.durationFilter===opt.key) ? null : opt.key;
             ui.activeTab = "duracion"; saveUI();
+            closeOrderMenu(); renderAll();
+          });
+          sub.appendChild(chip);
+        });
+        item.appendChild(sub);
+      }
+
+      if(tabId === "vista"){
+        const sub = document.createElement("div");
+        sub.className = "order-submenu";
+        const opts = [
+          {key:null, label:"Todas"},
+          {key:"true", label:"Vista"},
+          {key:"false", label:"No vista"}
+        ];
+        opts.forEach(opt=>{
+          const chip = document.createElement("div");
+          chip.className = "order-chip" + (ui.watchedFilter===opt.key ? " active" : "");
+          chip.textContent = opt.label;
+          chip.addEventListener("click", (e)=>{
+            e.stopPropagation();
+            ui.watchedFilter = (ui.watchedFilter===opt.key) ? null : opt.key;
+            ui.activeTab = "vista"; saveUI();
             closeOrderMenu(); renderAll();
           });
           sub.appendChild(chip);
@@ -836,17 +872,19 @@
     const genrePills = (m.genres||[]).map(g=>`<span class="pill">${escapeHtml(g)}</span>`).join("");
     card.innerHTML = `
       <div class="card-top">
-        <div class="card-meta" style="display:flex;justify-content:space-between;">
+        <div class="card-topline">
           <span>${m.year||"—"} · ${m.duration? m.duration+" min":"—"}</span>
           <span class="watched-flag ${m.watched?'si':'no'}">${m.watched?'Vista':'No vista'}</span>
         </div>
         <div class="card-title">${escapeHtml(titleOf(m))}</div>
         <div class="card-meta">${escapeHtml(m.director||"Director desconocido")}</div>
-        <div class="pills">${genrePills}</div>
-        <div class="rating-row">
+        <div class="genre-rating-row">
+          <div class="pills">${genrePills}</div>
           <div class="stars">${renderStarsDisplay(m.rating10)}</div>
-          <span class="score-num">${m.rating10?m.rating10+"/10":"sin puntuar"}</span>
-          ${m.imdb?`<span class="imdb-badge">IMDb ${m.imdb}</span>`:""}
+          <div class="score-nums">
+            <span class="score-num">${m.rating10?m.rating10+"/10":"sin puntuar"}</span>
+            ${m.imdb?`<span class="imdb-badge">IMDb ${m.imdb}</span>`:""}
+          </div>
         </div>
       </div>
       <div class="card-actions">
@@ -910,6 +948,8 @@
       const min = parseInt(ui.durationFilter);
       list = list.filter(m=> (m.duration||0) >= min);
     }
+    if(ui.watchedFilter === "true") list = list.filter(m=> m.watched);
+    if(ui.watchedFilter === "false") list = list.filter(m=> !m.watched);
     return list;
   }
 
@@ -978,6 +1018,24 @@
       Object.keys(groups).sort().forEach(a=>{
         main.appendChild(buildGroup(a, groups[a]));
       });
+      return;
+    }
+    if(mode === "vista"){
+      if(ui.watchedFilter){
+        const sorted = [...list].sort((a,b)=> titleOf(a).localeCompare(titleOf(b),'es'));
+        main.appendChild(buildGrid(sorted));
+        return;
+      }
+      const groups = { "Vista":[], "No vista":[] };
+      list.forEach(m=> groups[m.watched ? "Vista" : "No vista"].push(m));
+      ["Vista","No vista"].forEach(k=>{
+        if(groups[k].length) main.appendChild(buildGroup(k, groups[k]));
+      });
+      return;
+    }
+    if(mode === "puntaje"){
+      const sorted = [...list].sort((a,b)=> (b.rating10||0) - (a.rating10||0) || titleOf(a).localeCompare(titleOf(b),'es'));
+      main.appendChild(buildGrid(sorted));
       return;
     }
   }
