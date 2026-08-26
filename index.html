@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Films</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4A0E1F" id="themeColorMeta">
 <link rel="icon" href="icon-192.png">
@@ -14,6 +11,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Films">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
 
   :root{
@@ -321,6 +321,9 @@
     <h1>Films</h1>
   </div>
   <div class="header-controls">
+    <button class="circle-btn" id="apiKeysBtn" title="Configurar claves de API (TMDB/OMDb)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
     <button class="icon-btn" id="langToggle" title="Cambiar idioma de títulos">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="4 5 12 5 12 3"></polyline>
@@ -365,6 +368,10 @@
     <div class="field-row">
       <div class="field"><label>Título en español</label><input id="f_titleEs"></div>
       <div class="field"><label>Título en inglés</label><input id="f_titleEn"></div>
+    </div>
+    <div class="field" style="display:flex; gap:10px; align-items:center;">
+      <button type="button" class="btn" id="autofillBtn" style="flex-shrink:0;">🔎 Autocompletar con TMDB</button>
+      <span class="hint" id="autofillStatus"></span>
     </div>
     <div class="field">
       <label>Foto de portada</label>
@@ -438,6 +445,29 @@
     <div class="connections-list" id="connList"></div>
     <div class="modal-actions">
       <button class="btn" id="closeConnBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal claves API -->
+<div class="overlay" id="apiKeysOverlay">
+  <div class="modal" style="max-width:420px;">
+    <h2>Claves de API para autocompletar</h2>
+    <p class="hint" style="margin-bottom:12px;">
+      Se guardan solo en este dispositivo. Necesitás una clave gratuita de TMDB (obligatoria) y, si querés el puntaje de IMDb, otra de OMDb (opcional).
+      Esto solo funciona con la app subida a un hosting real, no dentro de esta vista previa del chat.
+    </p>
+    <div class="field">
+      <label>Clave de TMDB (API Read Access Token o API Key v3)</label>
+      <input id="f_tmdbKey" placeholder="Pegá acá tu clave de TMDB">
+    </div>
+    <div class="field">
+      <label>Clave de OMDb (opcional, para el puntaje de IMDb)</label>
+      <input id="f_omdbKey" placeholder="Pegá acá tu clave de OMDb">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="cancelApiKeysBtn">Cancelar</button>
+      <button class="btn primary" id="saveApiKeysBtn">Guardar</button>
     </div>
   </div>
 </div>
@@ -869,6 +899,121 @@
   // ============ MODAL PELICULA ============
   const movieOverlay = document.getElementById("movieOverlay");
 
+  // ============ CLAVES DE API (TMDB / OMDb) ============
+  const API_KEYS_STORE = "cineteca_api_keys_v1";
+  function loadApiKeys(){ return load(API_KEYS_STORE, { tmdb:"", omdb:"" }); }
+  function saveApiKeys(keys){ localStorage.setItem(API_KEYS_STORE, JSON.stringify(keys)); }
+
+  const apiKeysOverlay = document.getElementById("apiKeysOverlay");
+  document.getElementById("apiKeysBtn").addEventListener("click", ()=>{
+    const keys = loadApiKeys();
+    document.getElementById("f_tmdbKey").value = keys.tmdb || "";
+    document.getElementById("f_omdbKey").value = keys.omdb || "";
+    apiKeysOverlay.classList.add("open");
+  });
+  document.getElementById("cancelApiKeysBtn").addEventListener("click", ()=> apiKeysOverlay.classList.remove("open"));
+  apiKeysOverlay.addEventListener("click", e=>{ if(e.target===apiKeysOverlay) apiKeysOverlay.classList.remove("open"); });
+  document.getElementById("saveApiKeysBtn").addEventListener("click", ()=>{
+    saveApiKeys({
+      tmdb: document.getElementById("f_tmdbKey").value.trim(),
+      omdb: document.getElementById("f_omdbKey").value.trim()
+    });
+    apiKeysOverlay.classList.remove("open");
+  });
+
+  // ============ AUTOCOMPLETAR CON TMDB / OMDb ============
+  async function urlToDataUrl(url){
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function setAutofillStatus(msg){
+    document.getElementById("autofillStatus").textContent = msg;
+  }
+
+  async function runAutofill(){
+    const keys = loadApiKeys();
+    if(!keys.tmdb){
+      alert("Primero cargá tu clave de TMDB tocando el ícono de engranaje, arriba a la izquierda.");
+      return;
+    }
+    const query = (document.getElementById("f_titleEs").value || document.getElementById("f_titleEn").value).trim();
+    if(!query){ alert("Escribí al menos un título antes de autocompletar."); return; }
+    const yearHint = document.getElementById("f_year").value.trim();
+
+    setAutofillStatus("Buscando...");
+    try{
+      const searchUrl = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(query)}${yearHint ? "&year="+encodeURIComponent(yearHint) : ""}&language=es-ES&api_key=${encodeURIComponent(keys.tmdb)}`;
+      const searchRes = await fetch(searchUrl);
+      if(!searchRes.ok) throw new Error("tmdb_search_failed");
+      const searchData = await searchRes.json();
+      if(!searchData.results || searchData.results.length === 0){
+        setAutofillStatus("No se encontró en TMDB.");
+        return;
+      }
+      const basic = searchData.results[0];
+
+      const [esRes, enRes] = await Promise.all([
+        fetch(`https://api.themoviedb.org/3/movie/${basic.id}?language=es-ES&append_to_response=credits&api_key=${encodeURIComponent(keys.tmdb)}`),
+        fetch(`https://api.themoviedb.org/3/movie/${basic.id}?language=en-US&api_key=${encodeURIComponent(keys.tmdb)}`)
+      ]);
+      if(!esRes.ok || !enRes.ok) throw new Error("tmdb_details_failed");
+      const esData = await esRes.json();
+      const enData = await enRes.json();
+
+      document.getElementById("f_titleEs").value = esData.title || "";
+      document.getElementById("f_titleEn").value = enData.title || "";
+      document.getElementById("f_director").value = (esData.credits?.crew||[]).find(c=>c.job==="Director")?.name || "";
+      document.getElementById("f_year").value = (esData.release_date||"").slice(0,4) || "";
+      document.getElementById("f_duration").value = esData.runtime || "";
+      document.getElementById("f_actors").value = (esData.credits?.cast||[]).slice(0,6).map(a=>a.name).join(", ");
+      document.getElementById("f_genres").value = (esData.genres||[]).map(g=>g.name).join(", ");
+
+      if(esData.poster_path){
+        setAutofillStatus("Descargando portada...");
+        try{
+          const posterUrl = "https://image.tmdb.org/t/p/w342" + esData.poster_path;
+          currentPosterData = await urlToDataUrl(posterUrl);
+          updatePosterPreview();
+        }catch(err){ /* si falla la portada, seguimos igual con el resto de los datos */ }
+      }
+
+      if(esData.belongs_to_collection){
+        try{
+          const colRes = await fetch(`https://api.themoviedb.org/3/collection/${esData.belongs_to_collection.id}?language=es-ES&api_key=${encodeURIComponent(keys.tmdb)}`);
+          if(colRes.ok){
+            const colData = await colRes.json();
+            const others = (colData.parts||[]).filter(p=>p.id!==esData.id).map(p=>p.title);
+            document.getElementById("f_connections").value = others.join(", ");
+          }
+        }catch(err){ /* conectadas son opcionales */ }
+      }
+
+      if(keys.omdb && esData.imdb_id){
+        setAutofillStatus("Buscando puntaje IMDb...");
+        try{
+          const omdbRes = await fetch(`https://www.omdbapi.com/?i=${esData.imdb_id}&apikey=${encodeURIComponent(keys.omdb)}`);
+          const omdbData = await omdbRes.json();
+          if(omdbData.imdbRating && omdbData.imdbRating !== "N/A"){
+            document.getElementById("f_imdb").value = omdbData.imdbRating;
+          }
+        }catch(err){ /* imdb es opcional */ }
+      }
+
+      setAutofillStatus("Listo. Revisá los datos antes de guardar.");
+    }catch(err){
+      setAutofillStatus("");
+      alert("No se pudo autocompletar. Revisá tu clave de TMDB y tu conexión a internet.");
+    }
+  }
+  document.getElementById("autofillBtn").addEventListener("click", runAutofill);
+
   let currentPosterData = null;
 
   function openMovieModal(id){
@@ -894,6 +1039,7 @@
     document.getElementById("f_poster").value = "";
     updatePosterPreview();
 
+    setAutofillStatus("");
     movieOverlay.classList.add("open");
   }
   function closeMovieModal(){ movieOverlay.classList.remove("open"); editingId = null; }
