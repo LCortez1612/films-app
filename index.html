@@ -60,7 +60,7 @@
   body{
     background:var(--bg); color:var(--text);
     font-family:var(--font-body);
-    min-height:100vh;
+    min-height:100vh; display:flex; flex-direction:column;
     transition:background .25s ease, color .25s ease;
   }
   [data-theme="pixel"] body{ font-size:18px; }
@@ -183,7 +183,12 @@
   [data-theme="pixel"] .order-chip{ border-radius:0; }
   .order-chip.active{ background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600; }
 
-  main{ padding:20px clamp(14px,4vw,40px) 80px; }
+  main{ padding:20px clamp(14px,4vw,40px) 80px; flex:1; }
+
+  .site-credit{
+    color:#FBEFE9; font-size:12px; letter-spacing:.06em; text-align:center;
+    padding:18px clamp(14px,4vw,40px) 26px;
+  }
 
   /* ===== GRUPOS (por actor/genero) ===== */
   .group{ margin-bottom:28px; }
@@ -332,6 +337,17 @@
   .import-btn{ position:fixed; right:22px; bottom:86px; }
   [data-theme="nordico"] .import-btn.icon-btn{ box-shadow:var(--shadow); }
 
+  .page-jump-btn{
+    position:fixed; right:22px; bottom:140px; width:36px; height:36px;
+    padding:0; background:var(--surface-2); color:var(--text); border:var(--card-border);
+    border-radius:50%; box-shadow:var(--shadow); font-size:22px; line-height:1; z-index:30;
+    transition:transform .2s ease, color .2s ease, border-color .2s ease;
+  }
+  .page-jump-btn:hover{ color:var(--accent); border-color:var(--accent); }
+  .page-jump-btn .jump-symbol{ display:block; transform:rotate(90deg); }
+  .page-jump-btn.at-bottom .jump-symbol{ transform:rotate(-90deg); }
+  [data-theme="pixel"] .page-jump-btn{ border-radius:0; border:2px solid var(--border); }
+
   .empty-state{ text-align:center; padding:60px 20px; color:var(--muted); }
   .empty-state h3{ margin-bottom:8px; font-size:16px; }
 
@@ -397,8 +413,11 @@
 
 <main id="main"></main>
 
+<footer class="site-credit">Creado por Fernecero</footer>
+
 <button class="fab" id="addBtn" title="Agregar película">+</button>
 <button class="icon-btn import-btn" id="importBtn" title="Importar datos de búsqueda">Importar</button>
+<button class="page-jump-btn" id="pageJumpBtn" type="button" aria-label="Ir al final" title="Ir al final"><span class="jump-symbol" aria-hidden="true">《</span></button>
 
 <!-- Modal agregar/editar -->
 <div class="overlay" id="movieOverlay">
@@ -844,6 +863,23 @@
 
   // ============ BUSQUEDA ============
   document.getElementById("searchInput").addEventListener("input", renderAll);
+
+  // ============ SALTO AL INICIO / FINAL ============
+  const pageJumpBtn = document.getElementById("pageJumpBtn");
+  function isAtPageBottom(){
+    return window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+  }
+  function updatePageJumpButton(){
+    const atBottom = isAtPageBottom();
+    pageJumpBtn.classList.toggle("at-bottom", atBottom);
+    pageJumpBtn.setAttribute("aria-label", atBottom ? "Ir al inicio" : "Ir al final");
+    pageJumpBtn.title = atBottom ? "Ir al inicio" : "Ir al final";
+  }
+  pageJumpBtn.addEventListener("click", ()=>{
+    window.scrollTo({ top: isAtPageBottom() ? 0 : document.documentElement.scrollHeight, behavior:"smooth" });
+  });
+  window.addEventListener("scroll", updatePageJumpButton, { passive:true });
+  window.addEventListener("resize", updatePageJumpButton);
 
   function matchesSearch(m, q){
     if(!q) return true;
@@ -1693,6 +1729,7 @@
   applyThemeUI();
   renderPaletteMenu();
   renderAll();
+  updatePageJumpButton();
 
   // Revisa cada tanto si algún círculo de "nueva" ya cumplió la hora, para
   // que se apague solo aunque no se toque nada en el medio.
