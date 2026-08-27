@@ -46,7 +46,7 @@
 
   /* ===== TEMA NORDICO ===== */
   [data-theme="nordico"]{
-    --font-display:'Comic Runes', 'Familjen Grotesk', sans-serif; --font-body:'Familjen Grotesk', sans-serif;
+    --font-display:'Comic Runes', 'Familjen Grotesk', sans-serif; --font-body:'Comic Runes', 'Familjen Grotesk', sans-serif;
     --card-radius: 14px; --card-border: 1px solid var(--border);
     --card-shadow: var(--shadow);
     --tab-radius: 999px;
@@ -69,6 +69,9 @@
     transition:background .25s ease, color .25s ease;
   }
   [data-theme="pixel"] body{ font-size:18px; }
+  [data-theme="nordico"] body{ letter-spacing:.01em; }
+  [data-theme="nordico"] .hint, [data-theme="nordico"] .card-meta, [data-theme="nordico"] .score-num,
+  [data-theme="nordico"] .field label, [data-theme="nordico"] .pill{ letter-spacing:.015em; }
 
   h1,h2,h3{ font-family:var(--font-display); margin:0; }
 
@@ -242,8 +245,10 @@
   [data-theme="nordico"] .card-title{ letter-spacing:.02em; }
   [data-theme="nordico"] h1, [data-theme="nordico"] h2, [data-theme="nordico"] .brand-mark{ letter-spacing:.03em; }
   [data-theme="pixel"] .card-title{ font-size:11px; line-height:1.6; }
-  .card-topline{ display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--muted); margin-bottom:6px; }
+  .card-topline{ display:flex; justify-content:space-between; align-items:flex-start; font-size:13px; color:var(--muted); margin-bottom:6px; }
+  .topline-right-wrap{ display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
   .topline-right{ display:flex; align-items:center; gap:6px; }
+  .stars-mini{ transform:scale(.85); transform-origin:right center; }
   .new-dot{
     width:9px; height:9px; border-radius:50%; background:#FFFFFF;
     box-shadow:0 0 0 1px var(--border);
@@ -254,7 +259,7 @@
     50% { opacity: 0.15; }
   }
   .card-meta{ font-size:12px; color:var(--muted); margin-bottom:6px; }
-  .genre-rating-row{ display:flex; align-items:center; flex-wrap:wrap; gap:6px 8px; }
+  .genre-rating-row{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px 8px; }
   .pills{ display:flex; flex-wrap:wrap; gap:5px; }
   .pill{
     font-size:11px; padding:3px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent-strong);
@@ -378,6 +383,8 @@
 
   .import-btn{ position:fixed; right:22px; bottom:86px; }
   [data-theme="nordico"] .import-btn.icon-btn{ box-shadow:var(--shadow); }
+  .api-keys-fab{ position:fixed; left:22px; bottom:22px; }
+  [data-theme="nordico"] .api-keys-fab.circle-btn{ box-shadow:var(--shadow); }
 
   /* ===== BOTON DE SALTO SIMETRICO Y CENTRADO ===== */
   .page-jump-btn{
@@ -420,9 +427,6 @@
     <h1>Films</h1>
   </div>
   <div class="header-controls">
-    <button class="circle-btn" id="apiKeysBtn" title="Configurar claves de API (TMDB/OMDb)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-    </button>
     <button class="icon-btn" id="langToggle" title="Cambiar idioma de títulos">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="4 5 12 5 12 3"></polyline>
@@ -467,6 +471,9 @@
 
 <button class="fab" id="addBtn" title="Agregar película">+</button>
 <button class="icon-btn import-btn" id="importBtn" title="Importar datos de búsqueda">Importar</button>
+<button class="circle-btn api-keys-fab" id="apiKeysBtn" title="Configurar claves de API (TMDB/OMDb)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+</button>
 <button class="page-jump-btn" id="pageJumpBtn" type="button" aria-label="Ir al final" title="Ir al final">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <polyline points="6 9 12 15 18 9"></polyline>
@@ -503,17 +510,21 @@
         <option value="bottom">Inferior</option>
       </select>
     </div>
-    <div class="field-row">
-      <div class="field"><label>Director</label><input id="f_director"></div>
-      <div class="field"><label>Año</label><input id="f_year" type="number"></div>
+
+    <button type="button" class="btn" id="toggleMovieDetailsBtn" style="width:100%; margin-bottom:14px;">Más detalles (director, actores, género...) ▾</button>
+    <div id="movieDetailsSection" style="display:none;">
+      <div class="field-row">
+        <div class="field"><label>Director</label><input id="f_director"></div>
+        <div class="field"><label>Año</label><input id="f_year" type="number"></div>
+      </div>
+      <div class="field"><label>Actores (separados por coma)</label><input id="f_actors"></div>
+      <div class="field-row">
+        <div class="field"><label>Género (separado por coma)</label><input id="f_genres"></div>
+        <div class="field"><label>Duración (minutos)</label><input id="f_duration" type="number"></div>
+      </div>
+      <div class="field"><label>Conectadas: precuela, secuela, saga (separadas por coma)</label><input id="f_connections"></div>
+      <div class="field"><label>Puntaje IMDb (opcional)</label><input id="f_imdb" type="number" step="0.1"></div>
     </div>
-    <div class="field"><label>Actores (separados por coma)</label><input id="f_actors"></div>
-    <div class="field-row">
-      <div class="field"><label>Género (separado por coma)</label><input id="f_genres"></div>
-      <div class="field"><label>Duración (minutos)</label><input id="f_duration" type="number"></div>
-    </div>
-    <div class="field"><label>Conectadas: precuela, secuela, saga (separadas por coma)</label><input id="f_connections"></div>
-    <div class="field"><label>Puntaje IMDb (opcional)</label><input id="f_imdb" type="number" step="0.1"></div>
 
     <div class="field">
       <label>Mi puntuación</label>
@@ -1042,20 +1053,20 @@
       <div class="card-top">
         <div class="card-topline">
           <span>${m.year||"—"} · ${m.duration? m.duration+" min":"—"}</span>
-          <span class="topline-right">
+          <div class="topline-right-wrap">
+            <span class="topline-right">
+              <span class="stars stars-mini">${renderStarsDisplay(m.rating10)}</span>
+              <span class="score-num">${m.rating10?m.rating10+"/10":"sin puntuar"}</span>
+              <span class="watched-flag ${m.watched?'si':'no'}">${m.watched?'Vista':'No vista'}</span>
+            </span>
             ${isNewAndUnseen(m) ? '<span class="new-dot" title="Agregada recientemente"></span>' : ""}
-            <span class="watched-flag ${m.watched?'si':'no'}">${m.watched?'Vista':'No vista'}</span>
-          </span>
+          </div>
         </div>
         <div class="card-title">${escapeHtml(titleOf(m))}</div>
         <div class="card-meta">${escapeHtml(m.director||"Director desconocido")}</div>
         <div class="genre-rating-row">
           <div class="pills">${genrePills}</div>
-          <div class="stars">${renderStarsDisplay(m.rating10)}</div>
-          <div class="score-nums">
-            <span class="score-num">${m.rating10?m.rating10+"/10":"sin puntuar"}</span>
-            ${m.imdb?`<span class="imdb-badge">IMDb ${m.imdb}</span>`:""}
-          </div>
+          ${m.imdb?`<span class="imdb-badge">IMDb ${m.imdb}</span>`:""}
         </div>
       </div>
       <div class="card-actions">
@@ -1277,6 +1288,17 @@
   }
 
   const movieOverlay = document.getElementById("movieOverlay");
+
+  function setMovieDetailsOpen(isOpen){
+    document.getElementById("movieDetailsSection").style.display = isOpen ? "block" : "none";
+    document.getElementById("toggleMovieDetailsBtn").textContent = isOpen
+      ? "Más detalles (director, actores, género...) ▴"
+      : "Más detalles (director, actores, género...) ▾";
+  }
+  document.getElementById("toggleMovieDetailsBtn").addEventListener("click", ()=>{
+    const isOpen = document.getElementById("movieDetailsSection").style.display !== "none";
+    setMovieDetailsOpen(!isOpen);
+  });
 
   const API_KEYS_STORE = "cineteca_api_keys_v1";
   function loadApiKeys(){ return load(API_KEYS_STORE, { tmdb:"", omdb:"" }); }
@@ -1532,6 +1554,10 @@
     document.getElementById("f_favorite").checked = !!m?.favorite;
     renderRatingEditor(m?.rating10 || 0);
     document.getElementById("deleteMovieBtn").style.display = m ? "inline-block" : "none";
+
+    // Si es una película ya cargada (editar), mostrar los detalles abiertos de una;
+    // si es nueva, arrancar cerrado.
+    setMovieDetailsOpen(!!m);
 
     currentPosterData = m?.poster || null;
     document.getElementById("f_poster").value = "";
