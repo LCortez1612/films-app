@@ -60,7 +60,7 @@
   body{
     background:var(--bg); color:var(--text);
     font-family:var(--font-body);
-    min-height:100vh;
+    min-height:100vh; display:flex; flex-direction:column;
     transition:background .25s ease, color .25s ease;
   }
   [data-theme="pixel"] body{ font-size:18px; }
@@ -183,7 +183,12 @@
   [data-theme="pixel"] .order-chip{ border-radius:0; }
   .order-chip.active{ background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600; }
 
-  main{ padding:20px clamp(14px,4vw,40px) 80px; }
+  main{ padding:20px clamp(14px,4vw,40px) 80px; flex:1; }
+
+  .site-credit{
+    color:#FBEFE9; font-size:12px; letter-spacing:.06em; text-align:center;
+    padding:18px clamp(14px,4vw,40px) 26px;
+  }
 
   /* ===== GRUPOS (por actor/genero) ===== */
   .group{ margin-bottom:28px; }
@@ -274,6 +279,17 @@
   [data-theme="pixel"] .spine-label{ font-size:9px; }
   .spine .fav-mark{ position:absolute; top:4px; left:50%; transform:translateX(-50%); font-size:11px; }
 
+  /* ===== VISTA COMPACTA ===== */
+  .compact-list{ display:flex; flex-direction:column; gap:8px; max-width:760px; }
+  .compact-movie{
+    width:100%; display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:12px;
+    padding:12px 14px; background:var(--surface); border:var(--card-border); border-radius:var(--card-radius);
+    color:var(--text); text-align:left; box-shadow:var(--card-shadow);
+  }
+  .compact-movie:hover{ border-color:var(--accent); }
+  .compact-title{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--font-display); font-size:14px; }
+  .compact-movie .stars{ gap:1px; }
+
   /* ===== MODALES ===== */
   .overlay{
     position:fixed; inset:0; background:rgba(10,14,18,.55); display:none;
@@ -332,6 +348,17 @@
   .import-btn{ position:fixed; right:22px; bottom:86px; }
   [data-theme="nordico"] .import-btn.icon-btn{ box-shadow:var(--shadow); }
 
+  .page-jump-btn{
+    position:fixed; right:22px; bottom:140px; width:36px; height:36px;
+    padding:0; background:var(--surface-2); color:var(--text); border:var(--card-border);
+    border-radius:50%; box-shadow:var(--shadow); font-size:22px; line-height:1; z-index:30;
+    transition:transform .2s ease, color .2s ease, border-color .2s ease;
+  }
+  .page-jump-btn:hover{ color:var(--accent); border-color:var(--accent); }
+  .page-jump-btn .jump-symbol{ width:20px; height:20px; display:block; margin:auto; }
+  .page-jump-btn.at-bottom .jump-symbol{ transform:rotate(180deg); }
+  [data-theme="pixel"] .page-jump-btn{ border-radius:0; border:2px solid var(--border); }
+
   .empty-state{ text-align:center; padding:60px 20px; color:var(--muted); }
   .empty-state h3{ margin-bottom:8px; font-size:16px; }
 
@@ -349,6 +376,12 @@
     .field-row{ flex-direction:column; }
     header{ flex-direction:column; align-items:stretch; }
     .header-controls{ justify-content:space-between; }
+    .shelf{ padding:18px 12px 8px; gap:4px; }
+    .spine{ width:calc((100% - 24px) / 7); height:172px; }
+    .spine-label{ font-size:10px; max-height:154px; }
+    .compact-movie{ gap:8px; padding:11px 12px; }
+    .compact-title{ font-size:13px; }
+    .compact-movie .star{ width:13px; height:13px; }
   }
 </style>
 </head>
@@ -374,6 +407,9 @@
       <span id="langCode">ES</span>
     </button>
     <button class="circle-btn" id="themeToggle" title="Cambiar tema"></button>
+    <button class="circle-btn" id="viewToggle" title="Cambiar a vista compacta" aria-label="Cambiar a vista compacta">
+      <svg id="viewToggleIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="6" height="6"></rect><rect x="14" y="4" width="6" height="6"></rect><rect x="4" y="14" width="6" height="6"></rect><rect x="14" y="14" width="6" height="6"></rect></svg>
+    </button>
     <div class="palette-wrap" id="paletteDropdown">
       <button class="circle-btn palette-circle" id="paletteToggle" title="Cambiar color"></button>
       <div class="palette-menu" id="paletteMenu"></div>
@@ -397,8 +433,11 @@
 
 <main id="main"></main>
 
+<footer class="site-credit">Creado por Fernecero</footer>
+
 <button class="fab" id="addBtn" title="Agregar película">+</button>
 <button class="icon-btn import-btn" id="importBtn" title="Importar datos de búsqueda">Importar</button>
+<button class="page-jump-btn" id="pageJumpBtn" type="button" aria-label="Ir al final" title="Ir al final"><svg class="jump-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
 
 <!-- Modal agregar/editar -->
 <div class="overlay" id="movieOverlay">
@@ -421,6 +460,10 @@
           <button type="button" class="btn" id="clearPosterBtn" style="display:none; align-self:flex-start;">Quitar</button>
         </div>
       </div>
+    </div>
+    <div class="field" id="posterPositionField" style="display:none;">
+      <label for="f_posterPosition">Encuadre en estantería: mové la imagen hacia arriba o abajo</label>
+      <input id="f_posterPosition" type="range" min="0" max="100" value="50">
     </div>
     <div class="field-row">
       <div class="field"><label>Director</label><input id="f_director"></div>
@@ -572,7 +615,8 @@
     freeOrder: [],
     genreFilter: null,
     durationFilter: null,
-    watchedFilter: null
+    watchedFilter: null,
+    view: "grid"
   });
   // Por si el dispositivo ya tenía guardado un orden viejo sin los modos nuevos
   ALL_SORT_IDS.forEach(id=>{ if(!ui.tabOrder.includes(id)) ui.tabOrder.push(id); });
@@ -660,6 +704,21 @@
   document.getElementById("themeToggle").addEventListener("click", ()=>{
     ui.theme = ui.theme === "nordico" ? "pixel" : "nordico";
     saveUI(); applyThemeUI();
+  });
+  function updateViewToggle(){
+    const isCompact = ui.view === "compact";
+    const btn = document.getElementById("viewToggle");
+    const icon = document.getElementById("viewToggleIcon");
+    btn.title = isCompact ? "Cambiar a vista de tarjetas" : "Cambiar a vista compacta";
+    btn.setAttribute("aria-label", btn.title);
+    btn.setAttribute("aria-pressed", String(isCompact));
+    icon.innerHTML = isCompact
+      ? '<path d="M5 6h14M5 12h14M5 18h14"></path><path d="M3 6h.01M3 12h.01M3 18h.01"></path>'
+      : '<rect x="4" y="4" width="6" height="6"></rect><rect x="14" y="4" width="6" height="6"></rect><rect x="4" y="14" width="6" height="6"></rect><rect x="14" y="14" width="6" height="6"></rect>';
+  }
+  document.getElementById("viewToggle").addEventListener("click", ()=>{
+    ui.view = ui.view === "compact" ? "grid" : "compact";
+    saveUI(); updateViewToggle(); renderAll();
   });
   document.getElementById("langToggle").addEventListener("click", ()=>{
     ui.lang = ui.lang === "es" ? "en" : "es";
@@ -844,6 +903,23 @@
 
   // ============ BUSQUEDA ============
   document.getElementById("searchInput").addEventListener("input", renderAll);
+
+  // ============ SALTO AL INICIO / FINAL ============
+  const pageJumpBtn = document.getElementById("pageJumpBtn");
+  function isAtPageBottom(){
+    return window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+  }
+  function updatePageJumpButton(){
+    const atBottom = isAtPageBottom();
+    pageJumpBtn.classList.toggle("at-bottom", atBottom);
+    pageJumpBtn.setAttribute("aria-label", atBottom ? "Ir al inicio" : "Ir al final");
+    pageJumpBtn.title = atBottom ? "Ir al inicio" : "Ir al final";
+  }
+  pageJumpBtn.addEventListener("click", ()=>{
+    window.scrollTo({ top: isAtPageBottom() ? 0 : document.documentElement.scrollHeight, behavior:"smooth" });
+  });
+  window.addEventListener("scroll", updatePageJumpButton, { passive:true });
+  window.addEventListener("resize", updatePageJumpButton);
 
   function matchesSearch(m, q){
     if(!q) return true;
@@ -1090,9 +1166,23 @@
 
   function buildGrid(list){
     const grid = document.createElement("div");
-    grid.className = "grid";
-    list.forEach(m=> grid.appendChild(buildCard(m)));
+    const isCompact = ui.view === "compact";
+    grid.className = isCompact ? "compact-list" : "grid";
+    list.forEach(m=> grid.appendChild(isCompact ? buildCompactMovie(m) : buildCard(m)));
     return grid;
+  }
+  function buildCompactMovie(m){
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "compact-movie";
+    row.title = "Editar " + titleOf(m);
+    row.innerHTML = `
+      <span class="compact-title">${escapeHtml(titleOf(m))}</span>
+      <span class="stars" aria-label="Puntaje: ${m.rating10 || 0} de 10">${renderStarsDisplay(m.rating10)}</span>
+      <span class="compact-duration">${m.duration ? m.duration + " min" : "—"}</span>
+    `;
+    row.addEventListener("click", ()=> openMovieModal(m.id));
+    return row;
   }
   function buildGroup(label, list){
     const wrap = document.createElement("div");
@@ -1121,7 +1211,10 @@
       if(!m) return;
       const spine = document.createElement("div");
       spine.className = "spine" + (m.poster ? " has-poster" : "");
-      if(m.poster) spine.style.backgroundImage = `url(${m.poster})`;
+      if(m.poster){
+        spine.style.backgroundImage = `url(${m.poster})`;
+        spine.style.backgroundPosition = `center ${Number.isFinite(m.posterPosition) ? m.posterPosition : 50}%`;
+      }
       spine.draggable = true;
       spine.dataset.id = id;
       spine.title = titleOf(m) + " — click para editar";
@@ -1380,6 +1473,7 @@
   document.getElementById("autofillBatchBtn").addEventListener("click", runAutofillBatch);
 
   let currentPosterData = null;
+  let currentPosterPosition = 50;
 
   function openMovieModal(id){
     editingId = id || null;
@@ -1405,7 +1499,9 @@
     document.getElementById("deleteMovieBtn").style.display = m ? "inline-block" : "none";
 
     currentPosterData = m?.poster || null;
+    currentPosterPosition = Number.isFinite(m?.posterPosition) ? m.posterPosition : 50;
     document.getElementById("f_poster").value = "";
+    document.getElementById("f_posterPosition").value = currentPosterPosition;
     updatePosterPreview();
 
     setAutofillStatus("");
@@ -1416,13 +1512,20 @@
   function updatePosterPreview(){
     const img = document.getElementById("posterPreview");
     const clearBtn = document.getElementById("clearPosterBtn");
+    const positionField = document.getElementById("posterPositionField");
     if(currentPosterData){
-      img.src = currentPosterData; img.style.display = "block";
+      img.src = currentPosterData; img.style.objectPosition = `center ${currentPosterPosition}%`; img.style.display = "block";
       clearBtn.style.display = "inline-block";
+      positionField.style.display = "block";
     } else {
       img.style.display = "none"; clearBtn.style.display = "none";
+      positionField.style.display = "none";
     }
   }
+  document.getElementById("f_posterPosition").addEventListener("input", (e)=>{
+    currentPosterPosition = Number(e.target.value);
+    updatePosterPreview();
+  });
 
   document.getElementById("f_poster").addEventListener("change", (e)=>{
     const file = e.target.files[0];
@@ -1439,6 +1542,8 @@
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         currentPosterData = canvas.toDataURL("image/jpeg", 0.82);
+        currentPosterPosition = 50;
+        document.getElementById("f_posterPosition").value = currentPosterPosition;
         updatePosterPreview();
       };
       img.src = ev.target.result;
@@ -1447,6 +1552,7 @@
   });
   document.getElementById("clearPosterBtn").addEventListener("click", ()=>{
     currentPosterData = null;
+    currentPosterPosition = 50;
     document.getElementById("f_poster").value = "";
     updatePosterPreview();
   });
@@ -1496,7 +1602,8 @@
       rating10: parseFloat(document.getElementById("f_rating10").value) || 0,
       watched: document.getElementById("watchedSegment").dataset.value === "true",
       favorite: document.getElementById("f_favorite").checked,
-      poster: currentPosterData
+      poster: currentPosterData,
+      posterPosition: currentPosterPosition
     };
     if(!data.titleEs && !data.titleEn){ alert("Cargá al menos un título."); return; }
 
@@ -1691,8 +1798,10 @@
 
   // ============ INIT ============
   applyThemeUI();
+  updateViewToggle();
   renderPaletteMenu();
   renderAll();
+  updatePageJumpButton();
 
   // Revisa cada tanto si algún círculo de "nueva" ya cumplió la hora, para
   // que se apague solo aunque no se toque nada en el medio.
