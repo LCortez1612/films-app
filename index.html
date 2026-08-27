@@ -458,11 +458,20 @@
     <h2>Importar datos</h2>
     <p class="hint" style="margin-bottom:10px;">Pegá uno o varios bloques seguidos, uno debajo del otro. Si una película ya está cargada (mismo título o 3 datos o más iguales) se avisa y no se agrega.</p>
     <div class="field">
-      <textarea id="importText" rows="14" placeholder="TITULO_ES: ...&#10;TITULO_EN: ...&#10;DIRECTOR: ...&#10;ACTORES: ...&#10;GENERO: ...&#10;AÑO: ...&#10;DURACION: ...&#10;IMDB: ...&#10;CONECTADAS: ...&#10;&#10;TITULO_ES: (segunda película)&#10;..."></textarea>
+      <textarea id="importText" rows="10" placeholder="TITULO_ES: ...&#10;TITULO_EN: ...&#10;DIRECTOR: ...&#10;ACTORES: ...&#10;GENERO: ...&#10;AÑO: ...&#10;DURACION: ...&#10;IMDB: ...&#10;CONECTADAS: ...&#10;&#10;TITULO_ES: (segunda película)&#10;..."></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn" id="cancelImportBtn">Cancelar</button>
       <button class="btn primary" id="confirmImportBtn">Importar</button>
+    </div>
+
+    <div style="margin-top:20px; padding-top:16px; border-top:var(--card-border);">
+      <label style="display:block; font-size:12px; color:var(--muted); margin-bottom:4px;">O autocompletar por título (una película por línea, con o sin año)</label>
+      <div class="field">
+        <textarea id="autofillBatchText" rows="5" placeholder="The Grand Budapest Hotel, 2014&#10;Parasite&#10;Oldboy, 2003"></textarea>
+      </div>
+      <button type="button" class="btn primary" id="autofillBatchBtn" style="width:100%;">🔎 Buscar y agregar automáticamente</button>
+      <p class="hint" id="autofillBatchStatus" style="margin-top:8px;"></p>
     </div>
   </div>
 </div>
@@ -484,6 +493,7 @@
   <div id="posterLightboxEmpty" style="display:none;">Esta película no tiene portada cargada.</div>
 </div>
 
+<!-- Modal de respaldo -->
 <!-- Modal claves API -->
 <div class="overlay" id="apiKeysOverlay">
   <div class="modal" style="max-width:420px;">
@@ -545,7 +555,7 @@
     theme: "nordico",
     palette: "vino",
     lang: "es",
-    tabOrder: ["alfabetico","genero","actor","duracion","vista","puntaje","libre"],
+    tabOrder: ["alfabetico","actor","genero","duracion","vista","puntaje","libre"],
     activeTab: "alfabetico",
     showFavoritesOnly: false,
     freeOrder: [],
@@ -555,6 +565,17 @@
   });
   // Por si el dispositivo ya tenía guardado un orden viejo sin los modos nuevos
   ALL_SORT_IDS.forEach(id=>{ if(!ui.tabOrder.includes(id)) ui.tabOrder.push(id); });
+
+  // Migración única: reubica "Actor" justo debajo de "Alfabético" (no se repite después,
+  // así si lo movés de nuevo a mano queda como vos quieras).
+  if(!localStorage.getItem("cineteca_tab_migrated_v2")){
+    const withoutActor = ui.tabOrder.filter(id=>id!=="actor");
+    const alfIdx = withoutActor.indexOf("alfabetico");
+    withoutActor.splice(alfIdx+1, 0, "actor");
+    ui.tabOrder = withoutActor;
+    localStorage.setItem("cineteca_tab_migrated_v2", "1");
+    saveUI();
+  }
 
   let editingId = null;
 
@@ -663,7 +684,16 @@
       row.draggable = true;
 
       const labelSpan = document.createElement("span");
-      labelSpan.textContent = SORT_LABELS[tabId];
+      let rowLabel = SORT_LABELS[tabId];
+      if(tabId === "genero" && ui.genreFilter) rowLabel += ": " + ui.genreFilter;
+      if(tabId === "duracion" && ui.durationFilter){
+        const opt = DURATION_OPTIONS.find(o=>o.key===ui.durationFilter);
+        if(opt) rowLabel += ": " + opt.label;
+      }
+      if(tabId === "vista" && ui.watchedFilter){
+        rowLabel += ": " + (ui.watchedFilter === "true" ? "Vista" : "No vista");
+      }
+      labelSpan.textContent = rowLabel;
       labelSpan.style.flex = "1";
       row.appendChild(labelSpan);
 
@@ -1214,6 +1244,121 @@
     }
   }
   document.getElementById("autofillBtn").addEventListener("click", runAutofill);
+
+  // ============ AUTOCOMPLETADO POR LOTE (dentro de Importar) ============
+  async function runAutofillBatch(){
+    const keys = loadApiKeys();
+    if(!keys.tmdb){
+      alert("Primero cargá tu clave de TMDB tocando el ícono de engranaje, arriba a la izquierda.");
+      return;
+    }
+    const raw = document.getElementById("autofillBatchText").value;
+    const lines = raw.split("\n").map(l=>l.trim()).filter(Boolean);
+    if(lines.length === 0){ alert("Escribí al menos un título, uno por línea."); return; }
+
+    const statusEl = document.getElementById("autofillBatchStatus");
+    const batchBtn = document.getElementById("autofillBatchBtn");
+    batchBtn.disabled = true;
+
+    const added = [], repeated = [], notFound = [];
+
+    for(let i=0; i<lines.length; i++){
+      const line = lines[i];
+      statusEl.textContent = `Buscando ${i+1} de ${lines.length}: ${line}...`;
+
+      let title = line, year = null;
+      const yearMatch = line.match(/(19|20)\d{2}/);
+      if(yearMatch){
+        year = yearMatch[0];
+        const cut = line.slice(0, yearMatch.index).replace(/[,(]\s*$/, "").trim();
+        if(cut) title = cut;
+      }
+
+      try{
+        const searchUrl = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(title)}${year ? "&year="+encodeURIComponent(year) : ""}&language=es-ES&api_key=${encodeURIComponent(keys.tmdb)}`;
+        const searchRes = await fetch(searchUrl);
+        if(!searchRes.ok) throw new Error("search_failed");
+        const searchData = await searchRes.json();
+        if(!searchData.results || searchData.results.length === 0){
+          notFound.push(line);
+          continue;
+        }
+        const basic = searchData.results[0];
+
+        const [esRes, enRes] = await Promise.all([
+          fetch(`https://api.themoviedb.org/3/movie/${basic.id}?language=es-ES&append_to_response=credits&api_key=${encodeURIComponent(keys.tmdb)}`),
+          fetch(`https://api.themoviedb.org/3/movie/${basic.id}?language=en-US&api_key=${encodeURIComponent(keys.tmdb)}`)
+        ]);
+        if(!esRes.ok || !enRes.ok) throw new Error("details_failed");
+        const esData = await esRes.json();
+        const enData = await enRes.json();
+
+        const candidate = {
+          titleEs: esData.title || "",
+          titleEn: enData.title || "",
+          director: (esData.credits?.crew||[]).find(c=>c.job==="Director")?.name || "",
+          year: parseInt((esData.release_date||"").slice(0,4)) || null,
+          duration: esData.runtime || null,
+          actors: (esData.credits?.cast||[]).slice(0,6).map(a=>a.name),
+          genres: (esData.genres||[]).map(g=>g.name),
+          imdb: null
+        };
+
+        const dup = findDuplicate(candidate);
+        if(dup){ repeated.push(candidate.titleEs || candidate.titleEn || line); continue; }
+
+        let poster = null;
+        if(esData.poster_path){
+          try{ poster = await urlToDataUrl("https://image.tmdb.org/t/p/w342" + esData.poster_path); }
+          catch(err){ /* seguimos sin portada si falla la descarga */ }
+        }
+
+        let connectionsRaw = [];
+        if(esData.belongs_to_collection){
+          try{
+            const colRes = await fetch(`https://api.themoviedb.org/3/collection/${esData.belongs_to_collection.id}?language=es-ES&api_key=${encodeURIComponent(keys.tmdb)}`);
+            if(colRes.ok){
+              const colData = await colRes.json();
+              connectionsRaw = (colData.parts||[]).filter(p=>p.id!==esData.id).map(p=>p.title);
+            }
+          }catch(err){ /* conectadas son opcionales */ }
+        }
+
+        if(keys.omdb && esData.imdb_id){
+          try{
+            const omdbRes = await fetch(`https://www.omdbapi.com/?i=${esData.imdb_id}&apikey=${encodeURIComponent(keys.omdb)}`);
+            const omdbData = await omdbRes.json();
+            if(omdbData.imdbRating && omdbData.imdbRating !== "N/A") candidate.imdb = parseFloat(omdbData.imdbRating);
+          }catch(err){ /* imdb es opcional */ }
+        }
+
+        const movie = Object.assign({
+          id: uid(),
+          connections: resolveConnections(connectionsRaw),
+          rating10: 0, watched: false, favorite: false, poster: poster
+        }, candidate);
+        movies.push(movie);
+        added.push(movie.titleEs || movie.titleEn);
+
+      }catch(err){
+        notFound.push(line);
+      }
+    }
+
+    if(added.length) saveMovies();
+    document.getElementById("autofillBatchText").value = "";
+    statusEl.textContent = "";
+    batchBtn.disabled = false;
+    document.getElementById("importOverlay").classList.remove("open");
+    renderAll();
+
+    let msg = "";
+    if(added.length) msg += `Se agregaron ${added.length}: ${added.join(", ")}.`;
+    if(repeated.length) msg += `${msg?"\n":""}Película repetida: ${repeated.join(", ")}.`;
+    if(notFound.length) msg += `${msg?"\n":""}No se encontraron en TMDB: ${notFound.join(", ")}.`;
+    alert(msg || "No se agregó nada.");
+  }
+  document.getElementById("autofillBatchBtn").addEventListener("click", runAutofillBatch);
 
   let currentPosterData = null;
 
