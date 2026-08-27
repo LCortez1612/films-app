@@ -22,7 +22,7 @@
     --on-accent:#ffffff;
   }
 
-  /* ===== PALETAS DE COLOR (dominan fondo, superficie y texto) ===== */
+  /* ===== PALETAS DE COLOR ===== */
   [data-palette="vino"]{
     --bg:#4A0E1F; --surface:#5C1228; --surface-2:#6E1730; --border:#7C2038;
     --text:#FBEFE9; --muted:#DBAAB4;
@@ -39,7 +39,7 @@
     --accent:#5A189A; --on-accent:#FFFFFF; --accent-soft:rgba(90,24,154,0.3); --accent-strong:#7B2CBF;
   }
 
-  /* ===== TEMA NORDICO (tipografia estilo God of War Ragnarök: serif tallada, mayúsculas nórdicas) ===== */
+  /* ===== TEMA NORDICO ===== */
   [data-theme="nordico"]{
     --font-display:'Familjen Grotesk', sans-serif; --font-body:'Familjen Grotesk', sans-serif;
     --card-radius: 14px; --card-border: 1px solid var(--border);
@@ -148,7 +148,8 @@
 
   .hint{ font-size:12px; color:var(--muted); }
 
-  .order-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .order-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .order-controls-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .order-dropdown{ position:relative; }
   #orderBtn{ font-size:13px; }
   .order-menu{
@@ -190,7 +191,7 @@
     padding:18px clamp(14px,4vw,40px) 26px;
   }
 
-  /* ===== GRUPOS (por actor/genero) ===== */
+  /* ===== GRUPOS ===== */
   .group{ margin-bottom:28px; }
   .group-title{
     font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
@@ -200,6 +201,26 @@
   .grid{
     display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:16px;
   }
+
+  /* ===== VISTA COMPACTA (LISTA) ===== */
+  .list-view{
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .list-row{
+    background:var(--surface); border:var(--card-border); border-radius:var(--card-radius);
+    padding:10px 14px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    box-shadow:var(--card-shadow); cursor:pointer;
+  }
+  .list-row:hover{ background:var(--surface-2); }
+  .list-left{ display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
+  .list-title{
+    font-family:var(--font-display); font-size:15px; font-weight:600;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  [data-theme="pixel"] .list-title{ font-size:11px; }
+  .list-right{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
+  .list-stars{ display:flex; }
+  .list-duration{ font-size:13px; color:var(--muted); white-space:nowrap; }
 
   .card{
     background:var(--surface); border:var(--card-border); border-radius:var(--card-radius);
@@ -258,14 +279,14 @@
   /* ===== MODO ESTANTERIA (libre) ===== */
   .shelf{
     background:var(--surface-2); border:var(--card-border); border-radius:var(--card-radius);
-    padding:24px 18px 8px; display:flex; flex-wrap:wrap; align-items:flex-end; gap:6px;
+    padding:24px 12px 8px; display:flex; flex-wrap:wrap; align-items:flex-end; gap:6px;
     min-height:220px;
   }
   .spine{
     width:44px; height:190px; border-radius:4px; border:var(--card-border);
     background:var(--accent); color:var(--on-accent); display:flex; align-items:center; justify-content:center;
     cursor:grab; box-shadow:var(--card-shadow); flex-shrink:0; position:relative;
-    background-size:cover; background-position:center;
+    background-size:cover; background-position:center top;
   }
   .spine.dragging{ opacity:.4; }
   .spine.has-poster .spine-label{ display:none; }
@@ -277,7 +298,21 @@
     font-size:12px; white-space:nowrap; max-height:170px; overflow:hidden; text-overflow:ellipsis; padding:6px 0;
   }
   [data-theme="pixel"] .spine-label{ font-size:9px; }
-  .spine .fav-mark{ position:absolute; top:4px; left:50%; transform:translateX(-50%); font-size:11px; }
+  .spine .fav-mark{ position:absolute; top:4px; left:50%; transform:translateX(-50%); font-size:11px; z-index:2; }
+
+  /* Ajuste celular 7 columnas en estantería */
+  @media (max-width: 560px) {
+    .shelf {
+      padding: 16px 6px 8px;
+      gap: 4px;
+      justify-content: space-between;
+    }
+    .spine {
+      width: calc((100% - 24px) / 7);
+      min-width: 0;
+      height: 165px;
+    }
+  }
 
   /* ===== MODALES ===== */
   .overlay{
@@ -304,7 +339,7 @@
   [data-theme="pixel"] .modal h2{ font-size:13px; }
   .field{ margin-bottom:12px; }
   .field label{ display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
-  .field input, .field textarea{
+  .field input, .field textarea, .field select{
     width:100%; padding:9px 10px; border-radius:8px; border:var(--card-border);
     background:var(--surface); color:var(--text); font-size:14px; font-family:var(--font-body);
   }
@@ -337,15 +372,17 @@
   .import-btn{ position:fixed; right:22px; bottom:86px; }
   [data-theme="nordico"] .import-btn.icon-btn{ box-shadow:var(--shadow); }
 
+  /* ===== BOTON DE SALTO SIMETRICO Y CENTRADO ===== */
   .page-jump-btn{
-    position:fixed; right:22px; bottom:140px; width:36px; height:36px;
+    position:fixed; right:22px; bottom:140px; width:38px; height:38px;
     padding:0; background:var(--surface-2); color:var(--text); border:var(--card-border);
-    border-radius:50%; box-shadow:var(--shadow); font-size:22px; line-height:1; z-index:30;
+    border-radius:50%; box-shadow:var(--shadow); z-index:30;
+    display:flex; align-items:center; justify-content:center;
     transition:transform .2s ease, color .2s ease, border-color .2s ease;
   }
   .page-jump-btn:hover{ color:var(--accent); border-color:var(--accent); }
-  .page-jump-btn .jump-symbol{ display:block; transform:rotate(90deg); }
-  .page-jump-btn.at-bottom .jump-symbol{ transform:rotate(-90deg); }
+  .page-jump-btn svg{ width:20px; height:20px; display:block; transition:transform .25s ease; }
+  .page-jump-btn.at-bottom svg{ transform:rotate(180deg); }
   [data-theme="pixel"] .page-jump-btn{ border-radius:0; border:2px solid var(--border); }
 
   .empty-state{ text-align:center; padding:60px 20px; color:var(--muted); }
@@ -403,9 +440,15 @@
     <input type="text" id="searchInput" placeholder="Buscar por título, actor, director o género...">
   </div>
   <div class="order-row">
-    <div class="order-dropdown" id="orderDropdown">
-      <button class="icon-btn" id="orderBtn">Ordenar ▾</button>
-      <div class="order-menu" id="orderMenu"></div>
+    <div class="order-controls-left">
+      <div class="order-dropdown" id="orderDropdown">
+        <button class="icon-btn" id="orderBtn">Ordenar ▾</button>
+        <div class="order-menu" id="orderMenu"></div>
+      </div>
+      <button class="icon-btn" id="viewToggleBtn" title="Cambiar a vista de lista compacta">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        <span id="viewToggleLabel">Lista</span>
+      </button>
     </div>
     <button class="tab" id="favToggleBtn">★ Favoritas</button>
   </div>
@@ -417,7 +460,11 @@
 
 <button class="fab" id="addBtn" title="Agregar película">+</button>
 <button class="icon-btn import-btn" id="importBtn" title="Importar datos de búsqueda">Importar</button>
-<button class="page-jump-btn" id="pageJumpBtn" type="button" aria-label="Ir al final" title="Ir al final"><span class="jump-symbol" aria-hidden="true">《</span></button>
+<button class="page-jump-btn" id="pageJumpBtn" type="button" aria-label="Ir al final" title="Ir al final">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="6 9 12 15 18 9"></polyline>
+  </svg>
+</button>
 
 <!-- Modal agregar/editar -->
 <div class="overlay" id="movieOverlay">
@@ -440,6 +487,14 @@
           <button type="button" class="btn" id="clearPosterBtn" style="display:none; align-self:flex-start;">Quitar</button>
         </div>
       </div>
+    </div>
+    <div class="field">
+      <label>Corte / Posición de la portada en Estantería Libre</label>
+      <select id="f_posterPosition">
+        <option value="top">Superior (por defecto)</option>
+        <option value="center">Centro</option>
+        <option value="bottom">Inferior</option>
+      </select>
     </div>
     <div class="field-row">
       <div class="field"><label>Director</label><input id="f_director"></div>
@@ -522,7 +577,6 @@
   <div id="posterLightboxEmpty" style="display:none;">Esta película no tiene portada cargada.</div>
 </div>
 
-<!-- Modal de respaldo -->
 <!-- Modal claves API -->
 <div class="overlay" id="apiKeysOverlay">
   <div class="modal" style="max-width:420px;">
@@ -567,16 +621,15 @@
 
   let movies = load(STORE_KEY, []);
 
-  // Siembra inicial: solo la primera vez que se abre la app (localStorage vacío)
   if(movies.length === 0 && !localStorage.getItem("cineteca_seeded_v1")){
     movies = [
-      { id: uid(), titleEs:"Green Book", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null },
-      { id: uid(), titleEs:"Portrait of a lady on fire", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:false, favorite:false, poster:null },
-      { id: uid(), titleEs:"Antes de partir", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:false, favorite:false, poster:null },
-      { id: uid(), titleEs:"Old Boy", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:false, favorite:false, poster:null },
-      { id: uid(), titleEs:"Forest Gump", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null },
-      { id: uid(), titleEs:"Taxi Driver", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null },
-      { id: uid(), titleEs:"The Grand Budapest Hotel", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null }
+      { id: uid(), titleEs:"Green Book", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null, posterPosition:"top" },
+      { id: uid(), titleEs:"Portrait of a lady on fire", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:false, favorite:false, poster:null, posterPosition:"top" },
+      { id: uid(), titleEs:"Antes de partir", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:false, favorite:false, poster:null, posterPosition:"top" },
+      { id: uid(), titleEs:"Old Boy", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:false, favorite:false, poster:null, posterPosition:"top" },
+      { id: uid(), titleEs:"Forest Gump", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null, posterPosition:"top" },
+      { id: uid(), titleEs:"Taxi Driver", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null, posterPosition:"top" },
+      { id: uid(), titleEs:"The Grand Budapest Hotel", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null, posterPosition:"top" }
     ];
     localStorage.setItem(STORE_KEY, JSON.stringify(movies));
     localStorage.setItem("cineteca_seeded_v1", "1");
@@ -591,13 +644,11 @@
     freeOrder: [],
     genreFilter: null,
     durationFilter: null,
-    watchedFilter: null
+    watchedFilter: null,
+    compactView: false
   });
-  // Por si el dispositivo ya tenía guardado un orden viejo sin los modos nuevos
   ALL_SORT_IDS.forEach(id=>{ if(!ui.tabOrder.includes(id)) ui.tabOrder.push(id); });
 
-  // Migración única: reubica "Actor" justo debajo de "Alfabético" (no se repite después,
-  // así si lo movés de nuevo a mano queda como vos quieras).
   if(!localStorage.getItem("cineteca_tab_migrated_v2")){
     const withoutActor = ui.tabOrder.filter(id=>id!=="actor");
     const alfIdx = withoutActor.indexOf("alfabetico");
@@ -618,14 +669,13 @@
   function saveMovies(){ localStorage.setItem(STORE_KEY, JSON.stringify(movies)); }
   function saveUI(){ localStorage.setItem(UI_KEY, JSON.stringify(ui)); }
   function uid(){ return 'm_' + Math.random().toString(36).slice(2,10); }
-  const NEW_BADGE_DURATION_MS = 60 * 60 * 1000; // 1 hora
+  const NEW_BADGE_DURATION_MS = 60 * 60 * 1000;
   function isNewAndUnseen(m){
     return !!m.addedAt && !m.newSeen && (Date.now() - m.addedAt < NEW_BADGE_DURATION_MS);
   }
 
   function titleOf(movie){ return ui.lang === "es" ? (movie.titleEs || movie.titleEn) : (movie.titleEn || movie.titleEs); }
 
-  // ============ TEMA / PALETA ============
   const PALETTES = [
     {id:"vino", name:"Vino", swatch:"#8C1C3B", bg:"#4A0E1F"},
     {id:"byn", name:"Blanco y Negro", swatch:"#000000", bg:"#111113"},
@@ -649,6 +699,12 @@
 
     const themeColorMeta = document.getElementById("themeColorMeta");
     if(themeColorMeta) themeColorMeta.setAttribute("content", current.bg);
+    
+    const viewBtn = document.getElementById("viewToggleBtn");
+    if(viewBtn){
+      viewBtn.classList.toggle("active", ui.compactView);
+      document.getElementById("viewToggleLabel").textContent = ui.compactView ? "Tarjetas" : "Lista";
+    }
   }
 
   function renderPaletteMenu(){
@@ -685,7 +741,13 @@
     saveUI(); applyThemeUI(); renderAll();
   });
 
-  // ============ MENU "ORDENAR" ============
+  document.getElementById("viewToggleBtn").addEventListener("click", ()=>{
+    ui.compactView = !ui.compactView;
+    saveUI();
+    applyThemeUI();
+    renderAll();
+  });
+
   const DURATION_OPTIONS = [
     {key:"90", label:"1:30+"},
     {key:"120", label:"2:00+"},
@@ -861,13 +923,11 @@
     ui.showFavoritesOnly = !ui.showFavoritesOnly; saveUI(); renderAll();
   });
 
-  // ============ BUSQUEDA ============
   document.getElementById("searchInput").addEventListener("input", renderAll);
 
-  // ============ SALTO AL INICIO / FINAL ============
   const pageJumpBtn = document.getElementById("pageJumpBtn");
   function isAtPageBottom(){
-    return window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+    return window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10;
   }
   function updatePageJumpButton(){
     const atBottom = isAtPageBottom();
@@ -891,9 +951,7 @@
     return hay.includes(q);
   }
 
-  // ============ ESTRELLAS ============
   function starSVG(fill){
-    // fill: 'full' | 'half' | 'empty'
     if(fill === "full"){
       return '<svg class="star" viewBox="0 0 24 24" fill="currentColor" style="color:var(--accent)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01z"/></svg>';
     }
@@ -914,7 +972,6 @@
     return html;
   }
 
-  // interactive stars for modal
   function renderRatingEditor(current){
     const wrap = document.getElementById("ratingStars");
     wrap.innerHTML = "";
@@ -944,8 +1001,24 @@
     renderRatingEditor(v);
   });
 
-  // ============ CARD ============
   function findById(id){ return movies.find(m=>m.id===id); }
+
+  function buildListRow(m){
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.innerHTML = `
+      <div class="list-left">
+        ${isNewAndUnseen(m) ? '<span class="new-dot" title="Agregada recientemente"></span>' : ''}
+        <span class="list-title">${escapeHtml(titleOf(m))}</span>
+      </div>
+      <div class="list-right">
+        <div class="list-stars">${renderStarsDisplay(m.rating10)}</div>
+        <span class="list-duration">${m.duration ? m.duration + " min" : "—"}</span>
+      </div>
+    `;
+    row.addEventListener("click", ()=> openMovieModal(m.id));
+    return row;
+  }
 
   function buildCard(m){
     const card = document.createElement("div");
@@ -1020,7 +1093,6 @@
     return String(s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   }
 
-  // ============ RENDER PRINCIPAL ============
   function currentList(){
     const q = document.getElementById("searchInput").value.trim();
     let list = movies.filter(m=> matchesSearch(m,q));
@@ -1067,18 +1139,18 @@
 
     if(mode === "alfabetico"){
       const sorted = [...list].sort((a,b)=> titleOf(a).localeCompare(titleOf(b),'es'));
-      main.appendChild(buildGrid(sorted));
+      main.appendChild(buildViewContainer(sorted));
       return;
     }
     if(mode === "duracion"){
       const sorted = [...list].sort((a,b)=> (a.duration||0)-(b.duration||0));
-      main.appendChild(buildGrid(sorted));
+      main.appendChild(buildViewContainer(sorted));
       return;
     }
     if(mode === "genero"){
       if(ui.genreFilter){
         const sorted = [...list].sort((a,b)=> titleOf(a).localeCompare(titleOf(b),'es'));
-        main.appendChild(buildGrid(sorted));
+        main.appendChild(buildViewContainer(sorted));
         return;
       }
       const groups = {};
@@ -1107,7 +1179,7 @@
     if(mode === "vista"){
       if(ui.watchedFilter){
         const sorted = [...list].sort((a,b)=> titleOf(a).localeCompare(titleOf(b),'es'));
-        main.appendChild(buildGrid(sorted));
+        main.appendChild(buildViewContainer(sorted));
         return;
       }
       const groups = { "Vista":[], "No vista":[] };
@@ -1119,29 +1191,35 @@
     }
     if(mode === "puntaje"){
       const sorted = [...list].sort((a,b)=> (b.rating10||0) - (a.rating10||0) || titleOf(a).localeCompare(titleOf(b),'es'));
-      main.appendChild(buildGrid(sorted));
+      main.appendChild(buildViewContainer(sorted));
       return;
     }
   }
 
-  function buildGrid(list){
-    const grid = document.createElement("div");
-    grid.className = "grid";
-    list.forEach(m=> grid.appendChild(buildCard(m)));
-    return grid;
+  function buildViewContainer(list){
+    if(ui.compactView){
+      const container = document.createElement("div");
+      container.className = "list-view";
+      list.forEach(m=> container.appendChild(buildListRow(m)));
+      return container;
+    } else {
+      const grid = document.createElement("div");
+      grid.className = "grid";
+      list.forEach(m=> grid.appendChild(buildCard(m)));
+      return grid;
+    }
   }
+
   function buildGroup(label, list){
     const wrap = document.createElement("div");
     wrap.className = "group";
     wrap.innerHTML = `<div class="group-title">${escapeHtml(label)} · ${list.length}</div>`;
-    wrap.appendChild(buildGrid([...list].sort((a,b)=>titleOf(a).localeCompare(titleOf(b),'es'))));
+    wrap.appendChild(buildViewContainer([...list].sort((a,b)=>titleOf(a).localeCompare(titleOf(b),'es'))));
     return wrap;
   }
 
-  // ============ MODO ESTANTERIA (libre) ============
   function ensureFreeOrder(list){
     const ids = list.map(m=>m.id);
-    // agrega nuevas al final, mantiene orden guardado para las existentes
     let order = ui.freeOrder.filter(id=> ids.includes(id));
     ids.forEach(id=>{ if(!order.includes(id)) order.push(id); });
     ui.freeOrder = order;
@@ -1157,7 +1235,10 @@
       if(!m) return;
       const spine = document.createElement("div");
       spine.className = "spine" + (m.poster ? " has-poster" : "");
-      if(m.poster) spine.style.backgroundImage = `url(${m.poster})`;
+      if(m.poster){
+        spine.style.backgroundImage = `url(${m.poster})`;
+        spine.style.backgroundPosition = `center ${m.posterPosition || 'top'}`;
+      }
       spine.draggable = true;
       spine.dataset.id = id;
       spine.title = titleOf(m) + " — click para editar";
@@ -1181,10 +1262,8 @@
     document.getElementById("main").appendChild(shelf);
   }
 
-  // ============ MODAL PELICULA ============
   const movieOverlay = document.getElementById("movieOverlay");
 
-  // ============ CLAVES DE API (TMDB / OMDb) ============
   const API_KEYS_STORE = "cineteca_api_keys_v1";
   function loadApiKeys(){ return load(API_KEYS_STORE, { tmdb:"", omdb:"" }); }
   function saveApiKeys(keys){ localStorage.setItem(API_KEYS_STORE, JSON.stringify(keys)); }
@@ -1206,7 +1285,6 @@
     apiKeysOverlay.classList.remove("open");
   });
 
-  // ============ AUTOCOMPLETAR CON TMDB / OMDb ============
   async function urlToDataUrl(url){
     const res = await fetch(url);
     const blob = await res.blob();
@@ -1266,7 +1344,7 @@
           const posterUrl = "https://image.tmdb.org/t/p/w342" + esData.poster_path;
           currentPosterData = await urlToDataUrl(posterUrl);
           updatePosterPreview();
-        }catch(err){ /* si falla la portada, seguimos igual con el resto de los datos */ }
+        }catch(err){ }
       }
 
       if(esData.belongs_to_collection){
@@ -1277,7 +1355,7 @@
             const others = (colData.parts||[]).filter(p=>p.id!==esData.id).map(p=>p.title);
             document.getElementById("f_connections").value = others.join(", ");
           }
-        }catch(err){ /* conectadas son opcionales */ }
+        }catch(err){ }
       }
 
       if(keys.omdb && esData.imdb_id){
@@ -1288,7 +1366,7 @@
           if(omdbData.imdbRating && omdbData.imdbRating !== "N/A"){
             document.getElementById("f_imdb").value = omdbData.imdbRating;
           }
-        }catch(err){ /* imdb es opcional */ }
+        }catch(err){ }
       }
 
       setAutofillStatus("Listo. Revisá los datos antes de guardar.");
@@ -1299,7 +1377,6 @@
   }
   document.getElementById("autofillBtn").addEventListener("click", runAutofill);
 
-  // ============ AUTOCOMPLETADO POR LOTE (dentro de Importar) ============
   async function runAutofillBatch(){
     const keys = loadApiKeys();
     if(!keys.tmdb){
@@ -1355,7 +1432,8 @@
           duration: esData.runtime || null,
           actors: (esData.credits?.cast||[]).slice(0,6).map(a=>a.name),
           genres: (esData.genres||[]).map(g=>g.name),
-          imdb: null
+          imdb: null,
+          posterPosition: "top"
         };
 
         const dup = findDuplicate(candidate);
@@ -1364,7 +1442,7 @@
         let poster = null;
         if(esData.poster_path){
           try{ poster = await urlToDataUrl("https://image.tmdb.org/t/p/w342" + esData.poster_path); }
-          catch(err){ /* seguimos sin portada si falla la descarga */ }
+          catch(err){ }
         }
 
         let connectionsRaw = [];
@@ -1375,7 +1453,7 @@
               const colData = await colRes.json();
               connectionsRaw = (colData.parts||[]).filter(p=>p.id!==esData.id).map(p=>p.title);
             }
-          }catch(err){ /* conectadas son opcionales */ }
+          }catch(err){ }
         }
 
         if(keys.omdb && esData.imdb_id){
@@ -1383,7 +1461,7 @@
             const omdbRes = await fetch(`https://www.omdbapi.com/?i=${esData.imdb_id}&apikey=${encodeURIComponent(keys.omdb)}`);
             const omdbData = await omdbRes.json();
             if(omdbData.imdbRating && omdbData.imdbRating !== "N/A") candidate.imdb = parseFloat(omdbData.imdbRating);
-          }catch(err){ /* imdb es opcional */ }
+          }catch(err){ }
         }
 
         const movie = Object.assign({
@@ -1435,6 +1513,7 @@
     document.getElementById("f_connections").value = (m?.connections||[]).map(c=>c.name).join(", ");
     document.getElementById("f_imdb").value = m?.imdb || "";
     document.getElementById("f_rating10").value = m?.rating10 || 0;
+    document.getElementById("f_posterPosition").value = m?.posterPosition || "top";
     setWatchedSegment(!!m?.watched);
     document.getElementById("f_favorite").checked = !!m?.favorite;
     renderRatingEditor(m?.rating10 || 0);
@@ -1532,7 +1611,8 @@
       rating10: parseFloat(document.getElementById("f_rating10").value) || 0,
       watched: document.getElementById("watchedSegment").dataset.value === "true",
       favorite: document.getElementById("f_favorite").checked,
-      poster: currentPosterData
+      poster: currentPosterData,
+      posterPosition: document.getElementById("f_posterPosition").value || "top"
     };
     if(!data.titleEs && !data.titleEn){ alert("Cargá al menos un título."); return; }
 
@@ -1557,7 +1637,6 @@
     renderAll();
   });
 
-  // ============ MODAL IMPORTAR ============
   const importOverlay = document.getElementById("importOverlay");
   document.getElementById("importBtn").addEventListener("click", ()=>{
     document.getElementById("importText").value = "";
@@ -1588,7 +1667,6 @@
     };
   }
 
-  // Separa el texto pegado en varios bloques, cada uno arranca en una línea TITULO_ES:
   function splitImportBlocks(text){
     const lines = text.split("\n");
     const blocks = [];
@@ -1649,7 +1727,8 @@
       const candidate = {
         titleEs: parsed.titleEs, titleEn: parsed.titleEn,
         director: parsed.director, actors: parsed.actors, genres: parsed.genres,
-        year: parsed.year, duration: parsed.duration, imdb: parsed.imdb
+        year: parsed.year, duration: parsed.duration, imdb: parsed.imdb,
+        posterPosition: "top"
       };
 
       const dup = findDuplicate(candidate);
@@ -1679,7 +1758,6 @@
     if(msg) alert(msg);
   });
 
-  // ============ MODAL CONECTADAS ============
   const connOverlay = document.getElementById("connOverlay");
   function openConnections(m){
     const list = document.getElementById("connList");
@@ -1707,7 +1785,6 @@
   document.getElementById("closeConnBtn").addEventListener("click", ()=> connOverlay.classList.remove("open"));
   connOverlay.addEventListener("click", e=>{ if(e.target===connOverlay) connOverlay.classList.remove("open"); });
 
-  // ============ LIGHTBOX DE PORTADA GRANDE ============
   const posterLightbox = document.getElementById("posterLightbox");
   function openPosterLightbox(m){
     const img = document.getElementById("posterLightboxImg");
@@ -1725,21 +1802,15 @@
   }
   posterLightbox.addEventListener("click", ()=> posterLightbox.classList.remove("open"));
 
-  // ============ INIT ============
   applyThemeUI();
   renderPaletteMenu();
   renderAll();
   updatePageJumpButton();
 
-  // Revisa cada tanto si algún círculo de "nueva" ya cumplió la hora, para
-  // que se apague solo aunque no se toque nada en el medio.
   setInterval(()=>{
     if(movies.some(isNewAndUnseen)) renderAll();
   }, 5 * 60 * 1000);
 
-  // ============ PWA: registro del service worker ============
-  // No hace nada si se abre como archivo suelto (file://) o sin soporte:
-  // el registro falla en silencio y la app sigue funcionando igual.
   if("serviceWorker" in navigator){
     window.addEventListener("load", ()=>{
       navigator.serviceWorker.register("sw.js").catch(()=>{});
