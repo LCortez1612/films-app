@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="Films">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
 
   :root{
@@ -41,7 +41,7 @@
 
   /* ===== TEMA NORDICO (tipografia estilo God of War Ragnarök: serif tallada, mayúsculas nórdicas) ===== */
   [data-theme="nordico"]{
-    --font-display:'Familjen Grotesk', sans-serif; --font-body:'Inter', sans-serif;
+    --font-display:'Familjen Grotesk', sans-serif; --font-body:'Familjen Grotesk', sans-serif;
     --card-radius: 14px; --card-border: 1px solid var(--border);
     --card-shadow: var(--shadow);
     --tab-radius: 999px;
@@ -210,6 +210,16 @@
   .card-title{ font-family:var(--font-display); font-size:15px; line-height:1.3; margin-bottom:4px; }
   [data-theme="pixel"] .card-title{ font-size:11px; line-height:1.6; }
   .card-topline{ display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--muted); margin-bottom:6px; }
+  .topline-right{ display:flex; align-items:center; gap:6px; }
+  .new-dot{
+    width:9px; height:9px; border-radius:50%; background:#FFFFFF;
+    box-shadow:0 0 0 1px var(--border);
+    animation: newDotPulse 2s ease-in-out infinite;
+  }
+  @keyframes newDotPulse{
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.15; }
+  }
   .card-meta{ font-size:12px; color:var(--muted); margin-bottom:6px; }
   .genre-rating-row{ display:flex; align-items:center; flex-wrap:wrap; gap:6px 8px; }
   .pills{ display:flex; flex-wrap:wrap; gap:5px; }
@@ -499,16 +509,17 @@
   <div class="modal" style="max-width:420px;">
     <h2>Claves de API para autocompletar</h2>
     <p class="hint" style="margin-bottom:12px;">
-      Se guardan solo en este dispositivo. Necesitás una clave gratuita de TMDB (obligatoria) y, si querés el puntaje de IMDb, otra de OMDb (opcional).
+      Se guardan solo en este dispositivo (quedan guardadas aunque cierres la app) y no se muestran en texto plano.
+      Necesitás una clave gratuita de TMDB (obligatoria) y, si querés el puntaje de IMDb, otra de OMDb (opcional).
       Esto solo funciona con la app subida a un hosting real, no dentro de esta vista previa del chat.
     </p>
     <div class="field">
       <label>Clave de TMDB (API Read Access Token o API Key v3)</label>
-      <input id="f_tmdbKey" placeholder="Pegá acá tu clave de TMDB">
+      <input id="f_tmdbKey" type="password" autocomplete="off" placeholder="Pegá acá tu clave de TMDB">
     </div>
     <div class="field">
       <label>Clave de OMDb (opcional, para el puntaje de IMDb)</label>
-      <input id="f_omdbKey" placeholder="Pegá acá tu clave de OMDb">
+      <input id="f_omdbKey" type="password" autocomplete="off" placeholder="Pegá acá tu clave de OMDb">
     </div>
     <div class="modal-actions">
       <button class="btn" id="cancelApiKeysBtn">Cancelar</button>
@@ -588,6 +599,10 @@
   function saveMovies(){ localStorage.setItem(STORE_KEY, JSON.stringify(movies)); }
   function saveUI(){ localStorage.setItem(UI_KEY, JSON.stringify(ui)); }
   function uid(){ return 'm_' + Math.random().toString(36).slice(2,10); }
+  const NEW_BADGE_DURATION_MS = 60 * 60 * 1000; // 1 hora
+  function isNewAndUnseen(m){
+    return !!m.addedAt && !m.newSeen && (Date.now() - m.addedAt < NEW_BADGE_DURATION_MS);
+  }
 
   function titleOf(movie){ return ui.lang === "es" ? (movie.titleEs || movie.titleEn) : (movie.titleEn || movie.titleEs); }
 
@@ -904,7 +919,10 @@
       <div class="card-top">
         <div class="card-topline">
           <span>${m.year||"—"} · ${m.duration? m.duration+" min":"—"}</span>
-          <span class="watched-flag ${m.watched?'si':'no'}">${m.watched?'Vista':'No vista'}</span>
+          <span class="topline-right">
+            ${isNewAndUnseen(m) ? '<span class="new-dot" title="Agregada recientemente"></span>' : ""}
+            <span class="watched-flag ${m.watched?'si':'no'}">${m.watched?'Vista':'No vista'}</span>
+          </span>
         </div>
         <div class="card-title">${escapeHtml(titleOf(m))}</div>
         <div class="card-meta">${escapeHtml(m.director||"Director desconocido")}</div>
@@ -1335,7 +1353,8 @@
         const movie = Object.assign({
           id: uid(),
           connections: resolveConnections(connectionsRaw),
-          rating10: 0, watched: false, favorite: false, poster: poster
+          rating10: 0, watched: false, favorite: false, poster: poster,
+          addedAt: Date.now(), newSeen: false
         }, candidate);
         movies.push(movie);
         added.push(movie.titleEs || movie.titleEn);
@@ -1365,6 +1384,10 @@
   function openMovieModal(id){
     editingId = id || null;
     const m = id ? findById(id) : null;
+    if(m && isNewAndUnseen(m)){
+      m.newSeen = true;
+      saveMovies();
+    }
     document.getElementById("movieModalTitle").textContent = m ? "Editar película" : "Nueva película";
     document.getElementById("f_titleEs").value = m?.titleEs || "";
     document.getElementById("f_titleEn").value = m?.titleEn || "";
@@ -1481,7 +1504,7 @@
       const m = findById(editingId);
       Object.assign(m, data);
     } else {
-      movies.push(Object.assign({ id: uid() }, data));
+      movies.push(Object.assign({ id: uid(), addedAt: Date.now(), newSeen: false }, data));
     }
     saveMovies();
     closeMovieModal();
@@ -1602,7 +1625,8 @@
       const movie = Object.assign({
         id: uid(),
         connections: resolveConnections(parsed.connectionsRaw),
-        rating10: 0, watched: false, favorite: false, poster: null
+        rating10: 0, watched: false, favorite: false, poster: null,
+        addedAt: Date.now(), newSeen: false
       }, candidate);
       movies.push(movie);
       added.push(movie.titleEs || movie.titleEn);
@@ -1669,6 +1693,12 @@
   applyThemeUI();
   renderPaletteMenu();
   renderAll();
+
+  // Revisa cada tanto si algún círculo de "nueva" ya cumplió la hora, para
+  // que se apague solo aunque no se toque nada en el medio.
+  setInterval(()=>{
+    if(movies.some(isNewAndUnseen)) renderAll();
+  }, 5 * 60 * 1000);
 
   // ============ PWA: registro del service worker ============
   // No hace nada si se abre como archivo suelto (file://) o sin soporte:
