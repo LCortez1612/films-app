@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="Films">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600&family=Crimson+Pro:wght@400;500;600;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
   @font-face{
     font-family: 'Comic Runes';
@@ -58,6 +58,14 @@
     --card-radius: 0px; --card-border: 2px solid var(--border);
     --card-shadow: 4px 4px 0 var(--border);
     --tab-radius: 0px;
+  }
+
+  /* ===== TEMA NORMAL ===== */
+  [data-theme="normal"]{
+    --font-display:'Crimson Pro', serif; --font-body:'Crimson Pro', serif;
+    --card-radius: 10px; --card-border: 1px solid var(--border);
+    --card-shadow: var(--shadow);
+    --tab-radius: 6px;
   }
 
   *{ box-sizing:border-box; }
@@ -382,9 +390,11 @@
   [data-theme="pixel"] .fab{ border-radius:0; border:2px solid var(--border); }
 
   .import-btn{ position:fixed; right:22px; bottom:86px; }
-  [data-theme="nordico"] .import-btn.icon-btn{ box-shadow:var(--shadow); }
+  [data-theme="nordico"] .import-btn.icon-btn, [data-theme="normal"] .import-btn.icon-btn{ box-shadow:var(--shadow); }
   .api-keys-fab{ position:fixed; left:22px; bottom:22px; }
   [data-theme="nordico"] .api-keys-fab.circle-btn{ box-shadow:var(--shadow); }
+  .api-keys-link{ background:none; border:none; color:var(--muted); font-size:11px; text-decoration:underline; padding:4px 0; }
+  .api-keys-link:hover{ color:var(--accent); }
 
   /* ===== BOTON DE SALTO SIMETRICO Y CENTRADO ===== */
   .page-jump-btn{
@@ -437,7 +447,10 @@
       </svg>
       <span id="langCode">ES</span>
     </button>
-    <button class="circle-btn" id="themeToggle" title="Cambiar tema"></button>
+    <div class="palette-wrap" id="themeDropdown">
+      <button class="circle-btn" id="themeToggle" title="Cambiar tema"></button>
+      <div class="palette-menu" id="themeMenu"></div>
+    </div>
     <div class="palette-wrap" id="paletteDropdown">
       <button class="circle-btn palette-circle" id="paletteToggle" title="Cambiar color"></button>
       <div class="palette-menu" id="paletteMenu"></div>
@@ -471,9 +484,6 @@
 
 <button class="fab" id="addBtn" title="Agregar película">+</button>
 <button class="icon-btn import-btn" id="importBtn" title="Importar datos de búsqueda">Importar</button>
-<button class="circle-btn api-keys-fab" id="apiKeysBtn" title="Configurar claves de API (TMDB/OMDb)">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-</button>
 <button class="page-jump-btn" id="pageJumpBtn" type="button" aria-label="Ir al final" title="Ir al final">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <polyline points="6 9 12 15 18 9"></polyline>
@@ -511,21 +521,6 @@
       </select>
     </div>
 
-    <button type="button" class="btn" id="toggleMovieDetailsBtn" style="width:100%; margin-bottom:14px;">Más detalles (director, actores, género...) ▾</button>
-    <div id="movieDetailsSection" style="display:none;">
-      <div class="field-row">
-        <div class="field"><label>Director</label><input id="f_director"></div>
-        <div class="field"><label>Año</label><input id="f_year" type="number"></div>
-      </div>
-      <div class="field"><label>Actores (separados por coma)</label><input id="f_actors"></div>
-      <div class="field-row">
-        <div class="field"><label>Género (separado por coma)</label><input id="f_genres"></div>
-        <div class="field"><label>Duración (minutos)</label><input id="f_duration" type="number"></div>
-      </div>
-      <div class="field"><label>Conectadas: precuela, secuela, saga (separadas por coma)</label><input id="f_connections"></div>
-      <div class="field"><label>Puntaje IMDb (opcional)</label><input id="f_imdb" type="number" step="0.1"></div>
-    </div>
-
     <div class="field">
       <label>Mi puntuación</label>
       <div class="rating-edit">
@@ -544,6 +539,21 @@
     </div>
     <div class="checks">
       <label><input type="checkbox" id="f_favorite"> Favorita</label>
+    </div>
+
+    <button type="button" class="btn" id="toggleMovieDetailsBtn" style="width:100%; margin-bottom:14px;">Más detalles (director, actores, género...) ▾</button>
+    <div id="movieDetailsSection" style="display:none;">
+      <div class="field-row">
+        <div class="field"><label>Director</label><input id="f_director"></div>
+        <div class="field"><label>Año</label><input id="f_year" type="number"></div>
+      </div>
+      <div class="field"><label>Actores (separados por coma)</label><input id="f_actors"></div>
+      <div class="field-row">
+        <div class="field"><label>Género (separado por coma)</label><input id="f_genres"></div>
+        <div class="field"><label>Duración (minutos)</label><input id="f_duration" type="number"></div>
+      </div>
+      <div class="field"><label>Conectadas: precuela, secuela, saga (separadas por coma)</label><input id="f_connections"></div>
+      <div class="field"><label>Puntaje IMDb (opcional)</label><input id="f_imdb" type="number" step="0.1"></div>
     </div>
 
     <div class="modal-actions">
@@ -565,6 +575,7 @@
     </div>
     <button type="button" class="btn primary" id="autofillBatchBtn" style="width:100%;">🔎 Buscar y agregar automáticamente</button>
     <p class="hint" id="autofillBatchStatus" style="margin-top:8px;"></p>
+    <button type="button" class="api-keys-link" id="apiKeysBtn">Configurar claves de API (TMDB/OMDb)</button>
 
     <div style="margin-top:20px; padding-top:16px; border-top:var(--card-border);">
       <button type="button" class="btn" id="toggleManualImportBtn" style="width:100%;">Importar manualmente ▾</button>
@@ -711,13 +722,22 @@
 
   const ICON_CHAOS_BLADE = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2c.3 0 .55.22.6.51l.7 4.2 1.9-1.1c.3-.17.68-.06.84.24.15.28.07.63-.19.82l-1.98 1.44 4.9 8.5c.55.96-.1 2.14-1.2 2.14h-.2c-.66 0-1.27-.35-1.6-.93l-4.4-7.62-1.35 4.05a.62.62 0 0 1-.71.4l-1.5-.32.62 2.02c.1.34-.09.7-.43.8-.34.1-.7-.09-.8-.43L4.6 12.6c-.1-.34.09-.7.43-.8l1.98-.6-.9-1.55a.62.62 0 0 1 .23-.85c.3-.17.68-.06.84.24l.9 1.55 1.3-3.9-1.9-1.36a.62.62 0 0 1-.14-.87c.2-.28.58-.34.86-.15l1.75 1.25.65-3.9c.06-.3.3-.5.6-.5z"/></svg>`;
 
+  const ICON_NORMAL = `<span style="font-family:'Crimson Pro',serif; font-weight:600; font-size:15px;">Aa</span>`;
+
+  const THEMES = [
+    {id:"nordico", name:"Nórdico", icon:ICON_CHAOS_BLADE},
+    {id:"pixel", name:"Pixel", icon:ICON_GHOST},
+    {id:"normal", name:"Normal", icon:ICON_NORMAL}
+  ];
+
   function applyThemeUI(){
     document.body.setAttribute("data-theme", ui.theme);
     document.body.setAttribute("data-palette", ui.palette);
     document.getElementById("langCode").textContent = ui.lang.toUpperCase();
 
-    document.getElementById("themeToggle").innerHTML = ui.theme === "pixel" ? ICON_GHOST : ICON_CHAOS_BLADE;
-    document.getElementById("themeToggle").title = ui.theme === "pixel" ? "Tema: Pixel (tocar para cambiar a Nórdico)" : "Tema: Nórdico (tocar para cambiar a Pixel)";
+    const currentTheme = THEMES.find(t=>t.id===ui.theme) || THEMES[0];
+    document.getElementById("themeToggle").innerHTML = currentTheme.icon;
+    document.getElementById("themeToggle").title = "Tema: " + currentTheme.name;
 
     const current = PALETTES.find(p=>p.id===ui.palette) || PALETTES[0];
     document.getElementById("paletteToggle").style.background = current.swatch;
@@ -731,6 +751,22 @@
       document.getElementById("viewToggleLabel").textContent = ui.compactView ? "Tarjetas" : "Lista";
     }
   }
+
+  function renderThemeMenu(){
+    const menu = document.getElementById("themeMenu");
+    menu.innerHTML = "";
+    THEMES.forEach(t=>{
+      const item = document.createElement("div");
+      item.className = "palette-menu-item" + (ui.theme===t.id ? " active":"");
+      item.innerHTML = `<span style="width:18px; display:flex; align-items:center; justify-content:center;">${t.icon}</span><span>${t.name}</span>`;
+      item.addEventListener("click", ()=>{
+        ui.theme = t.id; saveUI(); applyThemeUI(); renderThemeMenu();
+        closeThemeMenu();
+      });
+      menu.appendChild(item);
+    });
+  }
+  function closeThemeMenu(){ document.getElementById("themeMenu").classList.remove("open"); }
 
   function renderPaletteMenu(){
     const menu = document.getElementById("paletteMenu");
@@ -757,9 +793,13 @@
     if(!dropdown.contains(e.target)) closePaletteMenu();
   });
 
-  document.getElementById("themeToggle").addEventListener("click", ()=>{
-    ui.theme = ui.theme === "nordico" ? "pixel" : "nordico";
-    saveUI(); applyThemeUI();
+  document.getElementById("themeToggle").addEventListener("click", (e)=>{
+    e.stopPropagation();
+    document.getElementById("themeMenu").classList.toggle("open");
+  });
+  document.addEventListener("click", (e)=>{
+    const themeDropdown = document.getElementById("themeDropdown");
+    if(!themeDropdown.contains(e.target)) closeThemeMenu();
   });
   document.getElementById("langToggle").addEventListener("click", ()=>{
     ui.lang = ui.lang === "es" ? "en" : "es";
@@ -1853,6 +1893,7 @@
   posterLightbox.addEventListener("click", ()=> posterLightbox.classList.remove("open"));
 
   applyThemeUI();
+  renderThemeMenu();
   renderPaletteMenu();
   renderAll();
   updatePageJumpButton();
