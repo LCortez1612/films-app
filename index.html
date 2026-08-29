@@ -723,7 +723,7 @@
     localStorage.setItem(STORE_KEY, JSON.stringify(movies));
     localStorage.setItem("cineteca_seeded_v1", "1");
   }
-  let ui = load(UI_KEY, {
+  let ui = loadWithDefaults(UI_KEY, {
     theme: "nordico",
     palette: "vino",
     lang: "es",
@@ -757,6 +757,11 @@
       const raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw) : fallback;
     }catch(e){ return fallback; }
+  }
+  function loadWithDefaults(key, defaults){
+    const loaded = load(key, null);
+    if(!loaded) return defaults;
+    return Object.assign({}, defaults, loaded);
   }
   function saveMovies(){ localStorage.setItem(STORE_KEY, JSON.stringify(movies)); }
   function saveUI(){ localStorage.setItem(UI_KEY, JSON.stringify(ui)); }
