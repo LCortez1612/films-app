@@ -315,7 +315,15 @@
     padding:24px 12px 8px; display:flex; flex-wrap:wrap; align-items:flex-end; gap:6px;
     min-height:220px;
   }
-  .shelf + .shelf{ margin-top:18px; }
+  .shelf-block + .shelf-block{ margin-top:18px; }
+  .shelf-block-header{ display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-bottom:8px; }
+  .shelf-del-btn{ font-size:12px; padding:6px 12px; }
+  .add-shelf-btn{ display:block; width:100%; margin-top:18px; }
+  .shelf-pending{
+    margin-top:26px; padding-top:14px; border-top:var(--card-border);
+  }
+  .shelf-pending .shelf-block-header{ justify-content:space-between; }
+  .shelf-pending .list-row{ cursor:grab; }
   .spine{
     width:44px; height:190px; border-radius:4px; border:var(--card-border);
     background:var(--accent); color:var(--on-accent); display:flex; align-items:center; justify-content:center;
@@ -723,6 +731,7 @@
     activeTab: "alfabetico",
     showFavoritesOnly: false,
     freeOrder: [],
+    shelves: [],
     genreFilter: null,
     durationFilter: null,
     watchedFilter: null,
@@ -1118,7 +1127,7 @@
 
   function findById(id){ return movies.find(m=>m.id===id); }
 
-  function buildListRow(m){
+  function buildListRow(m, draggableForShelf){
     const row = document.createElement("div");
     row.className = "list-row";
     row.innerHTML = `
@@ -1132,6 +1141,10 @@
       </div>
     `;
     row.addEventListener("click", ()=> openMovieModal(m.id));
+    if(draggableForShelf){
+      row.draggable = true;
+      row.addEventListener("dragstart", e=>{ e.dataTransfer.setData("text/plain", m.id); });
+    }
     return row;
   }
 
@@ -1249,6 +1262,8 @@
     const mode = ui.activeTab;
     const dirMul = ui.sortDirection === "desc" ? -1 : 1;
 
+    document.getElementById("viewToggleBtn").style.display = mode === "libre" ? "none" : "";
+
     if(mode === "libre"){
       renderShelf(list);
       return;
@@ -1349,6 +1364,14 @@
     return order;
   }
 
+  function moveSpineWithinOrder(draggedId, targetId){
+    const from = ui.freeOrder.indexOf(draggedId);
+    const to = ui.freeOrder.indexOf(targetId);
+    if(from === -1 || to === -1) return;
+    ui.freeOrder.splice(from,1);
+    ui.freeOrder.splice(to,0,draggedId);
+  }
+
   function buildSpine(m, id){
     const spine = document.createElement("div");
     spine.className = "spine" + (m.poster ? " has-poster" : "");
@@ -1366,49 +1389,105 @@
     spine.addEventListener("dragover", e=> e.preventDefault());
     spine.addEventListener("drop", e=>{
       e.preventDefault();
+      e.stopPropagation();
       const draggedId = e.dataTransfer.getData("text/plain");
       if(draggedId === id) return;
-      const from = ui.freeOrder.indexOf(draggedId);
-      const to = ui.freeOrder.indexOf(id);
-      ui.freeOrder.splice(from,1);
-      ui.freeOrder.splice(to,0,draggedId);
-      saveUI(); renderAll();
+      const dragged = findById(draggedId);
+      if(!dragged) return;
+      dragged.shelfId = m.shelfId || null;
+      moveSpineWithinOrder(draggedId, id);
+      saveMovies(); saveUI(); renderAll();
     });
     return spine;
+  }
+
+  function buildShelfBlock(shelfId, movies_){
+    const wrap = document.createElement("div");
+    wrap.className = "shelf-block";
+
+    const header = document.createElement("div");
+    header.className = "shelf-block-header";
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "btn danger shelf-del-btn";
+    delBtn.textContent = "Eliminar estantería";
+    delBtn.addEventListener("click", ()=>{
+      if(!confirm("¿Eliminar esta estantería? Las películas que tenga pasan a la lista de pendientes al final.")) return;
+      movies.forEach(m=>{ if(m.shelfId === shelfId) m.shelfId = null; });
+      ui.shelves = ui.shelves.filter(id=> id !== shelfId);
+      saveMovies(); saveUI(); renderAll();
+    });
+    header.appendChild(delBtn);
+    wrap.appendChild(header);
+
+    const shelf = document.createElement("div");
+    shelf.className = "shelf";
+    shelf.dataset.shelfId = shelfId;
+    shelf.addEventListener("dragover", e=> e.preventDefault());
+    shelf.addEventListener("drop", e=>{
+      e.preventDefault();
+      if(e.target !== shelf) return; // si soltó sobre un lomo, ya lo maneja buildSpine
+      const draggedId = e.dataTransfer.getData("text/plain");
+      const dragged = findById(draggedId);
+      if(!dragged) return;
+      dragged.shelfId = shelfId;
+      saveMovies(); saveUI(); renderAll();
+    });
+    movies_.forEach(m=> shelf.appendChild(buildSpine(m, m.id)));
+    wrap.appendChild(shelf);
+    return wrap;
   }
 
   function renderShelf(list){
     const order = ensureFreeOrder(list);
     const main = document.getElementById("main");
+    const byId = {};
+    order.forEach(id=>{ const m = findById(id); if(m) byId[id] = m; });
 
-    // Estante de medición invisible para calcular cuántos lomos entran por fila
-    const probe = document.createElement("div");
-    probe.className = "shelf";
-    probe.style.visibility = "hidden";
-    probe.style.position = "absolute";
-    probe.style.pointerEvents = "none";
-    const probeSpine = document.createElement("div");
-    probeSpine.className = "spine";
-    probe.appendChild(probeSpine);
-    main.appendChild(probe);
-    const containerWidth = probe.clientWidth;
-    const spineWidth = probeSpine.getBoundingClientRect().width;
-    const gap = parseFloat(getComputedStyle(probe).gap) || 6;
-    main.removeChild(probe);
+    if(ui.shelves.length === 0 && list.some(m=> !m.shelfId)){
+      // primera vez: crea una estantería default para no arrancar todo en pendientes
+      const defaultId = uid();
+      ui.shelves.push(defaultId);
+      list.forEach(m=>{ if(!m.shelfId) m.shelfId = defaultId; });
+      saveMovies(); saveUI();
+    }
 
-    const perRow = Math.max(1, Math.floor((containerWidth + gap) / (spineWidth + gap)));
-    const perShelf = perRow * 2;
+    ui.shelves.forEach(shelfId=>{
+      const inShelf = order.filter(id=> byId[id] && byId[id].shelfId === shelfId).map(id=> byId[id]);
+      main.appendChild(buildShelfBlock(shelfId, inShelf));
+    });
 
-    for(let i = 0; i < order.length; i += perShelf){
-      const chunk = order.slice(i, i + perShelf);
-      const shelf = document.createElement("div");
-      shelf.className = "shelf";
-      chunk.forEach(id=>{
-        const m = findById(id);
-        if(!m) return;
-        shelf.appendChild(buildSpine(m, id));
+    const addShelfBtn = document.createElement("button");
+    addShelfBtn.type = "button";
+    addShelfBtn.className = "btn primary add-shelf-btn";
+    addShelfBtn.textContent = "+ Nueva estantería";
+    addShelfBtn.addEventListener("click", ()=>{
+      ui.shelves.push(uid());
+      saveUI(); renderAll();
+    });
+    main.appendChild(addShelfBtn);
+
+    const pending = order.filter(id=> byId[id] && !ui.shelves.includes(byId[id].shelfId)).map(id=> byId[id]);
+    if(pending.length){
+      const pendingWrap = document.createElement("div");
+      pendingWrap.className = "shelf-pending";
+      const pendingHeader = document.createElement("div");
+      pendingHeader.className = "shelf-block-header";
+      pendingHeader.innerHTML = `<span class="hint">Sin estantería asignada — arrastrá una película hacia arriba para sumarla a un estante</span>`;
+      const convertBtn = document.createElement("button");
+      convertBtn.type = "button";
+      convertBtn.className = "btn";
+      convertBtn.textContent = "Convertir en estantería";
+      convertBtn.addEventListener("click", ()=>{
+        const newId = uid();
+        ui.shelves.push(newId);
+        pending.forEach(m=> m.shelfId = newId);
+        saveMovies(); saveUI(); renderAll();
       });
-      main.appendChild(shelf);
+      pendingHeader.appendChild(convertBtn);
+      pendingWrap.appendChild(pendingHeader);
+      pending.forEach(m=> pendingWrap.appendChild(buildListRow(m, true)));
+      main.appendChild(pendingWrap);
     }
   }
 
