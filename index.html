@@ -183,11 +183,18 @@
   }
   .search-wrap{ position:relative; max-width:480px; }
   .search-wrap input{
-    width:100%; padding:10px 14px 10px 36px; border-radius:var(--card-radius);
+    width:100%; padding:10px 34px 10px 36px; border-radius:var(--card-radius);
     border:var(--card-border); background:var(--surface); color:var(--text); font-size:14px;
     font-family:var(--font-body);
   }
   .search-wrap svg{ position:absolute; left:11px; top:11px; opacity:.5; }
+  .search-clear-btn{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    width:22px; height:22px; padding:0; border:none; background:transparent;
+    color:var(--muted); font-size:14px; line-height:1; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .search-clear-btn:hover{ color:var(--accent); }
 
   .tab{
     border:var(--card-border); background:var(--surface); color:var(--text);
@@ -323,6 +330,12 @@
   .card-actions button:last-child{ border-right:none; }
   .card-actions button:hover{ color:var(--accent); background:var(--surface); }
   .card-actions button.on{ color:var(--accent); }
+  .info-btn{ display:flex; align-items:center; justify-content:center; }
+  .info-btn span{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; border-radius:50%; border:1.5px solid currentColor;
+    font-size:11px; font-style:italic; font-family:var(--font-body); line-height:1;
+  }
 
   .watched-flag{
     font-size:11px; padding:2px 7px; border-radius:999px; font-weight:600;
@@ -582,6 +595,7 @@
   <div class="search-wrap">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" id="searchInput" placeholder="Buscar por título, actor, director o género...">
+    <button type="button" id="searchClearBtn" class="search-clear-btn" style="display:none;" title="Borrar búsqueda" aria-label="Borrar búsqueda">✕</button>
   </div>
   <div class="order-row">
     <div class="order-controls-left">
@@ -735,7 +749,7 @@
 <!-- Modal conectadas -->
 <div class="overlay" id="connOverlay">
   <div class="modal" style="max-width:380px;">
-    <h2>Conectadas</h2>
+    <h2>Información</h2>
     <div class="connections-list" id="connList"></div>
     <div class="modal-actions">
       <button class="btn" id="closeConnBtn">Cerrar</button>
@@ -1145,7 +1159,18 @@
     ui.showFavoritesOnly = !ui.showFavoritesOnly; saveUI(); renderAll();
   });
 
-  document.getElementById("searchInput").addEventListener("input", renderAll);
+  const searchInput = document.getElementById("searchInput");
+  const searchClearBtn = document.getElementById("searchClearBtn");
+  function updateSearchClearBtn(){
+    searchClearBtn.style.display = searchInput.value.length > 0 ? "flex" : "none";
+  }
+  searchInput.addEventListener("input", ()=>{ updateSearchClearBtn(); renderAll(); });
+  searchClearBtn.addEventListener("click", ()=>{
+    searchInput.value = "";
+    updateSearchClearBtn();
+    searchInput.focus();
+    renderAll();
+  });
 
   const pageJumpBtn = document.getElementById("pageJumpBtn");
   function isFavoritesVisible(){
@@ -1169,11 +1194,10 @@
   function matchesSearch(m, q){
     if(!q) return true;
     q = q.toLowerCase();
-    const hay = [
-      m.titleEs, m.titleEn, m.director,
-      ...(m.actors||[]), ...(m.genres||[])
-    ].filter(Boolean).join(" ").toLowerCase();
-    return hay.includes(q);
+    const otherFields = [m.titleEs, m.titleEn, m.director, ...(m.genres||[])]
+      .filter(Boolean).join(" ").toLowerCase();
+    if(otherFields.includes(q)) return true;
+    return (m.actors||[]).some(actor=> String(actor).toLowerCase().includes(q));
   }
 
   function starSVG(fill){
@@ -1277,7 +1301,7 @@
       <div class="card-actions">
         <button data-act="fav" class="${m.favorite?'on':''}" title="Favorita">${m.favorite?'★':'☆'}</button>
         <button data-act="copy" title="Copiar título">⧉</button>
-        <button data-act="conn" title="Conectadas">🔗</button>
+        <button data-act="info" class="info-btn" title="Información"><span>i</span></button>
         <button data-act="edit" title="Editar">✎</button>
       </div>
     `;
@@ -1296,7 +1320,7 @@
       const old = btn.textContent; btn.textContent = "✓";
       setTimeout(()=>{ btn.textContent = old; }, 900);
     });
-    card.querySelector('[data-act="conn"]').addEventListener("click", (e)=>{ e.stopPropagation(); openConnections(m); });
+    card.querySelector('[data-act="info"]').addEventListener("click", (e)=>{ e.stopPropagation(); openInfo(m); });
     card.querySelector('[data-act="edit"]').addEventListener("click", (e)=>{ e.stopPropagation(); openMovieModal(m.id); });
     return card;
   }
@@ -2211,27 +2235,21 @@
   });
 
   const connOverlay = document.getElementById("connOverlay");
-  function openConnections(m){
+  function openInfo(m){
     const list = document.getElementById("connList");
     list.innerHTML = "";
-    if(!m.connections || m.connections.length===0){
-      list.innerHTML = `<div class="hint">Esta película no tiene conectadas cargadas.</div>`;
-    } else {
-      m.connections.forEach(c=>{
-        const row = document.createElement("div");
-        row.className = "connection-item";
-        if(c.id && findById(c.id)){
-          row.innerHTML = `<span>${escapeHtml(c.name)}</span><button>Ir</button>`;
-          row.querySelector("button").addEventListener("click", ()=>{
-            connOverlay.classList.remove("open");
-            openMovieModal(c.id);
-          });
-        } else {
-          row.innerHTML = `<span class="disabled">${escapeHtml(c.name)}</span><span class="hint">no cargada</span>`;
-        }
-        list.appendChild(row);
-      });
-    }
+
+    const directorRow = document.createElement("div");
+    directorRow.className = "connection-item";
+    directorRow.innerHTML = `<span><strong>Director:</strong> ${escapeHtml(m.director || "Desconocido")}</span>`;
+    list.appendChild(directorRow);
+
+    const actorsRow = document.createElement("div");
+    actorsRow.className = "connection-item";
+    const actorsText = (m.actors && m.actors.length) ? m.actors.join(", ") : "Sin actores cargados";
+    actorsRow.innerHTML = `<span><strong>Actores:</strong> ${escapeHtml(actorsText)}</span>`;
+    list.appendChild(actorsRow);
+
     connOverlay.classList.add("open");
   }
   document.getElementById("closeConnBtn").addEventListener("click", ()=> connOverlay.classList.remove("open"));
