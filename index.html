@@ -127,6 +127,7 @@
     padding:0; flex-shrink:0;
   }
   .circle-btn svg{ width:19px; height:19px; }
+  #themeToggle{ color:#fff; }
   .palette-wrap{ position:relative; }
   .palette-circle{ border:2px solid var(--border); }
   .palette-menu{
@@ -156,7 +157,7 @@
   .search-wrap svg{ position:absolute; left:11px; top:11px; opacity:.5; }
 
   .tab{
-    border:var(--card-border); background:var(--surface); color:var(--muted);
+    border:var(--card-border); background:var(--surface); color:var(--text);
     border-radius:var(--tab-radius); padding:8px 14px; font-size:13px; font-weight:500;
     display:flex; align-items:center; gap:6px; user-select:none;
   }
@@ -498,8 +499,12 @@
       <div class="field"><label>Título en español</label><input id="f_titleEs"></div>
       <div class="field"><label>Título en inglés</label><input id="f_titleEn"></div>
     </div>
-    <div class="field" style="display:flex; gap:10px; align-items:center;">
+    <div class="field" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
       <button type="button" class="btn" id="autofillBtn" style="flex-shrink:0;">🔎 Autocompletar con TMDB</button>
+      <div class="segmented" id="posterLangSegment" data-value="es" style="flex-shrink:0;" title="Idioma de la portada">
+        <button type="button" class="seg-btn active" data-val="es">ES</button>
+        <button type="button" class="seg-btn" data-val="en">EN</button>
+      </div>
       <span class="hint" id="autofillStatus"></span>
     </div>
     <div class="field">
@@ -651,6 +656,7 @@
     duracion: "Duración",
     vista: "Vista/No vista",
     puntaje: "Puntaje",
+    fechaentrada: "Fecha de entrada",
     libre: "Estantería libre"
   };
   const ALL_SORT_IDS = Object.keys(SORT_LABELS);
@@ -674,14 +680,15 @@
     theme: "nordico",
     palette: "vino",
     lang: "es",
-    tabOrder: ["alfabetico","actor","genero","duracion","vista","puntaje","libre"],
+    tabOrder: ["alfabetico","actor","genero","duracion","vista","puntaje","fechaentrada","libre"],
     activeTab: "alfabetico",
     showFavoritesOnly: false,
     freeOrder: [],
     genreFilter: null,
     durationFilter: null,
     watchedFilter: null,
-    compactView: false
+    compactView: false,
+    posterLang: "es"
   });
   ALL_SORT_IDS.forEach(id=>{ if(!ui.tabOrder.includes(id)) ui.tabOrder.push(id); });
 
@@ -1078,7 +1085,7 @@
       </div>
       <div class="list-right">
         <div class="list-stars">${renderStarsDisplay(m.rating10)}</div>
-        <span class="list-duration">${m.duration ? m.duration + " min" : "—"}</span>
+        ${ui.activeTab === "fechaentrada" && m.addedAt ? `<span class="list-duration">${new Date(m.addedAt).toLocaleDateString('es-AR')}</span>` : `<span class="list-duration">${m.duration ? m.duration + " min" : "—"}</span>`}
       </div>
     `;
     row.addEventListener("click", ()=> openMovieModal(m.id));
@@ -1096,13 +1103,14 @@
           <div class="topline-right-wrap">
             <span class="topline-right">
               <span class="stars stars-mini">${renderStarsDisplay(m.rating10)}</span>
-              <span class="score-num">${m.rating10?m.rating10+"/10":"sin puntuar"}</span>
+              <span class="score-num">${m.rating10?m.rating10+"/10":"S/P"}</span>
               <span class="watched-flag ${m.watched?'si':'no'}">${m.watched?'Vista':'No vista'}</span>
             </span>
             ${isNewAndUnseen(m) ? '<span class="new-dot" title="Agregada recientemente"></span>' : ""}
           </div>
         </div>
         <div class="card-title">${escapeHtml(titleOf(m))}</div>
+        ${ui.activeTab === "fechaentrada" && m.addedAt ? `<div class="card-meta">Agregada: ${new Date(m.addedAt).toLocaleDateString('es-AR')}</div>` : ""}
         <div class="card-meta">${escapeHtml(m.director||"Director desconocido")}</div>
         <div class="genre-rating-row">
           <div class="pills">${genrePills}</div>
@@ -1256,6 +1264,11 @@
     }
     if(mode === "puntaje"){
       const sorted = [...list].sort((a,b)=> (b.rating10||0) - (a.rating10||0) || titleOf(a).localeCompare(titleOf(b),'es'));
+      main.appendChild(buildViewContainer(sorted));
+      return;
+    }
+    if(mode === "fechaentrada"){
+      const sorted = [...list].sort((a,b)=> (b.addedAt||0) - (a.addedAt||0));
       main.appendChild(buildViewContainer(sorted));
       return;
     }
@@ -1414,10 +1427,11 @@
       document.getElementById("f_actors").value = (esData.credits?.cast||[]).slice(0,6).map(a=>a.name).join(", ");
       document.getElementById("f_genres").value = (esData.genres||[]).map(g=>g.name).join(", ");
 
-      if(esData.poster_path){
+      const posterSourceData = ui.posterLang === "en" && enData.poster_path ? enData : esData;
+      if(posterSourceData.poster_path){
         setAutofillStatus("Descargando portada...");
         try{
-          const posterUrl = "https://image.tmdb.org/t/p/w342" + esData.poster_path;
+          const posterUrl = "https://image.tmdb.org/t/p/w342" + posterSourceData.poster_path;
           currentPosterData = await urlToDataUrl(posterUrl);
           updatePosterPreview();
         }catch(err){ }
@@ -1516,8 +1530,9 @@
         if(dup){ repeated.push(candidate.titleEs || candidate.titleEn || line); continue; }
 
         let poster = null;
-        if(esData.poster_path){
-          try{ poster = await urlToDataUrl("https://image.tmdb.org/t/p/w342" + esData.poster_path); }
+        const batchPosterSource = ui.posterLang === "en" && enData.poster_path ? enData : esData;
+        if(batchPosterSource.poster_path){
+          try{ poster = await urlToDataUrl("https://image.tmdb.org/t/p/w342" + batchPosterSource.poster_path); }
           catch(err){ }
         }
 
@@ -1591,6 +1606,7 @@
     document.getElementById("f_rating10").value = m?.rating10 || 0;
     document.getElementById("f_posterPosition").value = m?.posterPosition || "top";
     setWatchedSegment(!!m?.watched);
+    setPosterLangSegment(ui.posterLang);
     document.getElementById("f_favorite").checked = !!m?.favorite;
     renderRatingEditor(m?.rating10 || 0);
     document.getElementById("deleteMovieBtn").style.display = m ? "inline-block" : "none";
@@ -1657,6 +1673,21 @@
     const btn = e.target.closest(".seg-btn");
     if(!btn) return;
     setWatchedSegment(btn.dataset.val === "true");
+  });
+
+  function setPosterLangSegment(lang){
+    const wrap = document.getElementById("posterLangSegment");
+    wrap.dataset.value = lang;
+    wrap.querySelectorAll(".seg-btn").forEach(btn=>{
+      btn.classList.toggle("active", btn.dataset.val === lang);
+    });
+  }
+  document.getElementById("posterLangSegment").addEventListener("click", (e)=>{
+    const btn = e.target.closest(".seg-btn");
+    if(!btn) return;
+    ui.posterLang = btn.dataset.val;
+    saveUI();
+    setPosterLangSegment(ui.posterLang);
   });
 
   document.getElementById("addBtn").addEventListener("click", ()=> openMovieModal(null));
