@@ -151,6 +151,7 @@
   #themeToggle{ color:#fff; }
   .sort-dir-btn svg{ transition:transform .2s ease; }
   .sort-dir-btn.desc svg{ transform:scaleY(-1); }
+  #sortDirBtn{ color:#fff; }
 
   .poster-gallery-grid{
     display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:10px;
@@ -1197,7 +1198,15 @@
     const otherFields = [m.titleEs, m.titleEn, m.director, ...(m.genres||[])]
       .filter(Boolean).join(" ").toLowerCase();
     if(otherFields.includes(q)) return true;
-    return (m.actors||[]).some(actor=> String(actor).toLowerCase().includes(q));
+
+    const qWords = q.split(/\s+/).filter(Boolean);
+    return (m.actors||[]).some(actor=>{
+      const actorLower = String(actor).toLowerCase();
+      if(actorLower === q) return true;
+      const actorWords = actorLower.split(/\s+/).filter(Boolean);
+      // cada palabra buscada debe coincidir exactamente con alguna palabra del nombre del actor
+      return qWords.every(qw=> actorWords.some(aw=> aw === qw));
+    });
   }
 
   function starSVG(fill){
