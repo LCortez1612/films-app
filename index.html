@@ -290,7 +290,7 @@
   .star{ width:15px; height:15px; cursor:pointer; }
   .score-nums{ display:flex; align-items:center; gap:6px; flex-shrink:0; margin-left:auto; }
   .score-num{ font-size:12px; color:var(--muted); white-space:nowrap; }
-  .imdb-badge{ font-size:11px; font-weight:600; color:#fff; background:#F5C518; padding:2px 6px; border-radius:3px; }
+  .imdb-badge{ font-size:11px; font-weight:600; color:var(--on-accent); background:var(--accent); padding:2px 6px; border-radius:3px; }
 
   .card-actions{
     display:flex; border-top:var(--card-border); background:var(--surface-2);
@@ -315,6 +315,7 @@
     padding:24px 12px 8px; display:flex; flex-wrap:wrap; align-items:flex-end; gap:6px;
     min-height:220px;
   }
+  .shelf + .shelf{ margin-top:18px; }
   .spine{
     width:44px; height:190px; border-radius:4px; border:var(--card-border);
     background:var(--accent); color:var(--on-accent); display:flex; align-items:center; justify-content:center;
@@ -1348,40 +1349,67 @@
     return order;
   }
 
+  function buildSpine(m, id){
+    const spine = document.createElement("div");
+    spine.className = "spine" + (m.poster ? " has-poster" : "");
+    if(m.poster){
+      spine.style.backgroundImage = `url(${m.poster})`;
+      spine.style.backgroundPosition = `center ${m.posterPosition || 'top'}`;
+    }
+    spine.draggable = true;
+    spine.dataset.id = id;
+    spine.title = titleOf(m) + " — click para editar";
+    spine.innerHTML = `${m.favorite?'<span class="fav-mark">★</span>':''}<span class="spine-label">${escapeHtml(titleOf(m))}</span>`;
+    spine.addEventListener("click", ()=> openMovieModal(m.id));
+    spine.addEventListener("dragstart", e=>{ spine.classList.add("dragging"); e.dataTransfer.setData("text/plain", id); });
+    spine.addEventListener("dragend", ()=> spine.classList.remove("dragging"));
+    spine.addEventListener("dragover", e=> e.preventDefault());
+    spine.addEventListener("drop", e=>{
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData("text/plain");
+      if(draggedId === id) return;
+      const from = ui.freeOrder.indexOf(draggedId);
+      const to = ui.freeOrder.indexOf(id);
+      ui.freeOrder.splice(from,1);
+      ui.freeOrder.splice(to,0,draggedId);
+      saveUI(); renderAll();
+    });
+    return spine;
+  }
+
   function renderShelf(list){
     const order = ensureFreeOrder(list);
-    const shelf = document.createElement("div");
-    shelf.className = "shelf";
-    order.forEach(id=>{
-      const m = findById(id);
-      if(!m) return;
-      const spine = document.createElement("div");
-      spine.className = "spine" + (m.poster ? " has-poster" : "");
-      if(m.poster){
-        spine.style.backgroundImage = `url(${m.poster})`;
-        spine.style.backgroundPosition = `center ${m.posterPosition || 'top'}`;
-      }
-      spine.draggable = true;
-      spine.dataset.id = id;
-      spine.title = titleOf(m) + " — click para editar";
-      spine.innerHTML = `${m.favorite?'<span class="fav-mark">★</span>':''}<span class="spine-label">${escapeHtml(titleOf(m))}</span>`;
-      spine.addEventListener("click", ()=> openMovieModal(m.id));
-      spine.addEventListener("dragstart", e=>{ spine.classList.add("dragging"); e.dataTransfer.setData("text/plain", id); });
-      spine.addEventListener("dragend", ()=> spine.classList.remove("dragging"));
-      spine.addEventListener("dragover", e=> e.preventDefault());
-      spine.addEventListener("drop", e=>{
-        e.preventDefault();
-        const draggedId = e.dataTransfer.getData("text/plain");
-        if(draggedId === id) return;
-        const from = ui.freeOrder.indexOf(draggedId);
-        const to = ui.freeOrder.indexOf(id);
-        ui.freeOrder.splice(from,1);
-        ui.freeOrder.splice(to,0,draggedId);
-        saveUI(); renderAll();
+    const main = document.getElementById("main");
+
+    // Estante de medición invisible para calcular cuántos lomos entran por fila
+    const probe = document.createElement("div");
+    probe.className = "shelf";
+    probe.style.visibility = "hidden";
+    probe.style.position = "absolute";
+    probe.style.pointerEvents = "none";
+    const probeSpine = document.createElement("div");
+    probeSpine.className = "spine";
+    probe.appendChild(probeSpine);
+    main.appendChild(probe);
+    const containerWidth = probe.clientWidth;
+    const spineWidth = probeSpine.getBoundingClientRect().width;
+    const gap = parseFloat(getComputedStyle(probe).gap) || 6;
+    main.removeChild(probe);
+
+    const perRow = Math.max(1, Math.floor((containerWidth + gap) / (spineWidth + gap)));
+    const perShelf = perRow * 2;
+
+    for(let i = 0; i < order.length; i += perShelf){
+      const chunk = order.slice(i, i + perShelf);
+      const shelf = document.createElement("div");
+      shelf.className = "shelf";
+      chunk.forEach(id=>{
+        const m = findById(id);
+        if(!m) return;
+        shelf.appendChild(buildSpine(m, id));
       });
-      shelf.appendChild(spine);
-    });
-    document.getElementById("main").appendChild(shelf);
+      main.appendChild(shelf);
+    }
   }
 
   const movieOverlay = document.getElementById("movieOverlay");
