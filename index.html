@@ -63,9 +63,30 @@
   /* ===== TEMA NORMAL ===== */
   [data-theme="normal"]{
     --font-display:'Crimson Pro', serif; --font-body:'Crimson Pro', serif;
-    --card-radius: 10px; --card-border: 1px solid var(--border);
-    --card-shadow: var(--shadow);
-    --tab-radius: 6px;
+    --card-radius: 22px; --card-border: none;
+    --card-shadow: var(--neu-shadow-raised);
+    --tab-radius: 18px;
+  }
+  [data-theme="normal"][data-palette="vino"]{
+    --neu-light:#6a3947; --neu-dark:#210610;
+    --neu-shadow-raised: -7px -7px 14px var(--neu-light), 7px 7px 14px var(--neu-dark);
+    --neu-shadow-inset: inset -5px -5px 10px var(--neu-light), inset 5px 5px 10px var(--neu-dark);
+    --neu-shadow-soft: -4px -4px 8px var(--neu-light), 4px 4px 8px var(--neu-dark);
+    --neu-icon: #b98b96;
+  }
+  [data-theme="normal"][data-palette="byn"]{
+    --neu-light:#2c2c2c; --neu-dark:#000000;
+    --neu-shadow-raised: -7px -7px 14px var(--neu-light), 7px 7px 14px var(--neu-dark);
+    --neu-shadow-inset: inset -5px -5px 10px var(--neu-light), inset 5px 5px 10px var(--neu-dark);
+    --neu-shadow-soft: -4px -4px 8px var(--neu-light), 4px 4px 8px var(--neu-dark);
+    --neu-icon: #8f96a3;
+  }
+  [data-theme="normal"][data-palette="morado1"]{
+    --neu-light:#533472; --neu-dark:#14031f;
+    --neu-shadow-raised: -7px -7px 14px var(--neu-light), 7px 7px 14px var(--neu-dark);
+    --neu-shadow-inset: inset -5px -5px 10px var(--neu-light), inset 5px 5px 10px var(--neu-dark);
+    --neu-shadow-soft: -4px -4px 8px var(--neu-light), 4px 4px 8px var(--neu-dark);
+    --neu-icon: #a99bc4;
   }
 
   *{ box-sizing:border-box; }
@@ -451,6 +472,81 @@
     header{ flex-direction:column; align-items:stretch; }
     .header-controls{ justify-content:space-between; }
   }
+
+  /* ===== NEUMORFISMO — TEMA NORMAL ===== */
+  [data-theme="normal"] .icon-btn,
+  [data-theme="normal"] select.icon-select,
+  [data-theme="normal"] .circle-btn,
+  [data-theme="normal"] .tab,
+  [data-theme="normal"] .search-wrap input,
+  [data-theme="normal"] .order-menu,
+  [data-theme="normal"] .palette-menu,
+  [data-theme="normal"] .order-chip,
+  [data-theme="normal"] .list-row,
+  [data-theme="normal"] .card,
+  [data-theme="normal"] .modal,
+  [data-theme="normal"] .btn,
+  [data-theme="normal"] .shelf,
+  [data-theme="normal"] .spine,
+  [data-theme="normal"] .fab,
+  [data-theme="normal"] .page-jump-btn,
+  [data-theme="normal"] .connection-item{
+    background:var(--bg); border:none; box-shadow:var(--neu-shadow-raised); color:var(--neu-icon);
+  }
+  [data-theme="normal"] .card-poster,
+  [data-theme="normal"] .card-poster-placeholder{ box-shadow:none; }
+
+  [data-theme="normal"] .field input,
+  [data-theme="normal"] .field textarea,
+  [data-theme="normal"] .field select,
+  [data-theme="normal"] .seg-btn,
+  [data-theme="normal"] .segmented{
+    background:var(--bg); border:none; box-shadow:var(--neu-shadow-inset); color:var(--text);
+  }
+  [data-theme="normal"] .seg-btn:first-child{ border-right:none; }
+
+  [data-theme="normal"] .icon-btn.active,
+  [data-theme="normal"] .tab.active,
+  [data-theme="normal"] .seg-btn.active,
+  [data-theme="normal"] .order-item.active,
+  [data-theme="normal"] .order-chip.active,
+  [data-theme="normal"] .btn.primary,
+  [data-theme="normal"] .palette-menu-item.active{
+    background:var(--bg); box-shadow:var(--neu-shadow-inset); color:var(--accent); border-color:transparent; font-weight:600;
+  }
+
+  [data-theme="normal"] .btn:hover,
+  [data-theme="normal"] .icon-btn:hover{ color:var(--accent); border-color:transparent; }
+
+  [data-theme="normal"] .order-item:hover,
+  [data-theme="normal"] .palette-menu-item:hover{ background:transparent; box-shadow:var(--neu-shadow-soft); }
+
+  [data-theme="normal"] .group-title,
+  [data-theme="normal"] .modal h2,
+  [data-theme="normal"] .card-title,
+  [data-theme="normal"] .list-title{ color:var(--neu-icon); border-color:transparent; }
+
+  [data-theme="normal"] .card-topline,
+  [data-theme="normal"] .list-duration,
+  [data-theme="normal"] .hint,
+  [data-theme="normal"] .order-hint,
+  [data-theme="normal"] .field label{ color:var(--muted); }
+
+  [data-theme="normal"] .modal-actions{ background:transparent; border-top:none; box-shadow:none; }
+  [data-theme="normal"] #movieOverlay .modal-actions{ background:var(--bg); border-top:none; box-shadow:none; }
+
+  [data-theme="normal"] .list-row:hover{ background:var(--bg); box-shadow:var(--neu-shadow-soft); }
+
+  [data-theme="normal"] .connection-item{ box-shadow:var(--neu-shadow-soft); }
+
+  [data-theme="normal"] .watched-flag.si,
+  [data-theme="normal"] .watched-flag.no,
+  [data-theme="normal"] .imdb-badge{
+    background:var(--bg); box-shadow:var(--neu-shadow-inset); border:none;
+  }
+  [data-theme="normal"] .watched-flag.si{ color:var(--accent); }
+  [data-theme="normal"] .watched-flag.no{ color:var(--muted); }
+  [data-theme="normal"] .imdb-badge{ color:var(--accent); }
 </style>
 </head>
 <body data-theme="nordico" data-palette="vino">
