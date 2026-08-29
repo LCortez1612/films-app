@@ -130,6 +130,16 @@
   #themeToggle{ color:#fff; }
   .sort-dir-btn svg{ transition:transform .2s ease; }
   .sort-dir-btn.desc svg{ transform:scaleY(-1); }
+
+  .poster-gallery-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:10px;
+    max-height:60vh; overflow-y:auto;
+  }
+  .poster-gallery-grid img{
+    width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:6px; border:2px solid var(--border);
+    cursor:pointer; display:block;
+  }
+  .poster-gallery-grid img:hover{ border-color:var(--accent); }
   .palette-wrap{ position:relative; }
   .palette-circle{ border:2px solid var(--border); }
   .palette-menu{
@@ -396,8 +406,6 @@
   }
   [data-theme="pixel"] .fab{ border-radius:0; border:2px solid var(--border); }
 
-  .import-btn{ position:fixed; right:22px; bottom:86px; }
-  [data-theme="nordico"] .import-btn.icon-btn, [data-theme="normal"] .import-btn.icon-btn{ box-shadow:var(--shadow); }
   .api-keys-fab{ position:fixed; left:22px; bottom:22px; }
   [data-theme="nordico"] .api-keys-fab.circle-btn{ box-shadow:var(--shadow); }
   .api-keys-link{ background:none; border:none; color:var(--muted); font-size:11px; text-decoration:underline; padding:4px 0; }
@@ -499,7 +507,6 @@
 <footer class="site-credit">Creado por Fernecero</footer>
 
 <button class="fab" id="addBtn" title="Agregar película">+</button>
-<button class="icon-btn import-btn" id="importBtn" title="Importar datos de búsqueda">Importar</button>
 <button class="page-jump-btn" id="pageJumpBtn" type="button" aria-label="Ir al final" title="Ir al final">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <polyline points="6 9 12 15 18 9"></polyline>
@@ -528,7 +535,10 @@
         <img id="posterPreview" style="width:140px; height:205px; object-fit:cover; border-radius:8px; border:var(--card-border); display:none;">
         <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
           <input type="file" id="f_poster" accept="image/*">
-          <button type="button" class="btn" id="clearPosterBtn" style="display:none; align-self:flex-start;">Quitar</button>
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <button type="button" class="btn" id="clearPosterBtn" style="display:none;">Quitar</button>
+            <button type="button" class="btn" id="galleryPosterBtn" style="margin-left:auto;">Cambiar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -624,6 +634,18 @@
     <div class="connections-list" id="connList"></div>
     <div class="modal-actions">
       <button class="btn" id="closeConnBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal galería de portadas alternativas -->
+<div class="overlay" id="posterGalleryOverlay">
+  <div class="modal" style="max-width:520px;">
+    <h2>Elegir portada</h2>
+    <p class="hint" id="posterGalleryStatus" style="margin-bottom:10px;">Buscando en TMDB...</p>
+    <div class="poster-gallery-grid" id="posterGalleryGrid"></div>
+    <div class="modal-actions">
+      <button class="btn" id="closePosterGalleryBtn">Cerrar</button>
     </div>
   </div>
 </div>
@@ -1453,7 +1475,7 @@
       if(posterSourceData.poster_path){
         setAutofillStatus("Descargando portada...");
         try{
-          const posterUrl = "https://image.tmdb.org/t/p/w342" + posterSourceData.poster_path;
+          const posterUrl = "https://image.tmdb.org/t/p/w780" + posterSourceData.poster_path;
           currentPosterData = await urlToDataUrl(posterUrl);
           updatePosterPreview();
         }catch(err){ }
@@ -1554,7 +1576,7 @@
         let poster = null;
         const batchPosterSource = ui.posterLang === "en" && enData.poster_path ? enData : esData;
         if(batchPosterSource.poster_path){
-          try{ poster = await urlToDataUrl("https://image.tmdb.org/t/p/w342" + batchPosterSource.poster_path); }
+          try{ poster = await urlToDataUrl("https://image.tmdb.org/t/p/w780" + batchPosterSource.poster_path); }
           catch(err){ }
         }
 
@@ -1684,6 +1706,69 @@
     updatePosterPreview();
   });
 
+  const posterGalleryOverlay = document.getElementById("posterGalleryOverlay");
+  function setPosterGalleryStatus(msg){
+    document.getElementById("posterGalleryStatus").textContent = msg;
+  }
+  async function openPosterGallery(){
+    const keys = loadApiKeys();
+    if(!keys.tmdb){
+      alert("Primero cargá tu clave de TMDB desde el modal de Importar.");
+      return;
+    }
+    const query = (document.getElementById("f_titleEs").value || document.getElementById("f_titleEn").value).trim();
+    if(!query){ alert("Escribí al menos un título antes de buscar portadas."); return; }
+    const yearHint = document.getElementById("f_year").value.trim();
+
+    document.getElementById("posterGalleryGrid").innerHTML = "";
+    setPosterGalleryStatus("Buscando en TMDB...");
+    posterGalleryOverlay.classList.add("open");
+
+    try{
+      const searchUrl = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(query)}${yearHint ? "&year="+encodeURIComponent(yearHint) : ""}&language=es-ES&api_key=${encodeURIComponent(keys.tmdb)}`;
+      const searchRes = await fetch(searchUrl);
+      if(!searchRes.ok) throw new Error("tmdb_search_failed");
+      const searchData = await searchRes.json();
+      if(!searchData.results || searchData.results.length === 0){
+        setPosterGalleryStatus("No se encontró la película en TMDB.");
+        return;
+      }
+      const basic = searchData.results[0];
+
+      const imgRes = await fetch(`https://api.themoviedb.org/3/movie/${basic.id}/images?api_key=${encodeURIComponent(keys.tmdb)}`);
+      if(!imgRes.ok) throw new Error("tmdb_images_failed");
+      const imgData = await imgRes.json();
+      const posters = imgData.posters || [];
+      if(posters.length === 0){
+        setPosterGalleryStatus("No hay portadas alternativas disponibles.");
+        return;
+      }
+      setPosterGalleryStatus(`${posters.length} portadas encontradas. Tocá una para usarla.`);
+      const grid = document.getElementById("posterGalleryGrid");
+      posters.forEach(p=>{
+        const thumb = document.createElement("img");
+        thumb.src = "https://image.tmdb.org/t/p/w185" + p.file_path;
+        thumb.title = p.iso_639_1 ? `Idioma: ${p.iso_639_1}` : "Sin idioma";
+        thumb.addEventListener("click", async ()=>{
+          setPosterGalleryStatus("Descargando en alta resolución...");
+          try{
+            currentPosterData = await urlToDataUrl("https://image.tmdb.org/t/p/w780" + p.file_path);
+            updatePosterPreview();
+            posterGalleryOverlay.classList.remove("open");
+          }catch(err){
+            setPosterGalleryStatus("No se pudo descargar esa portada, probá con otra.");
+          }
+        });
+        grid.appendChild(thumb);
+      });
+    }catch(err){
+      setPosterGalleryStatus("Error al buscar portadas en TMDB.");
+    }
+  }
+  document.getElementById("galleryPosterBtn").addEventListener("click", openPosterGallery);
+  document.getElementById("closePosterGalleryBtn").addEventListener("click", ()=> posterGalleryOverlay.classList.remove("open"));
+  posterGalleryOverlay.addEventListener("click", e=>{ if(e.target===posterGalleryOverlay) posterGalleryOverlay.classList.remove("open"); });
+
   function setWatchedSegment(isWatched){
     const wrap = document.getElementById("watchedSegment");
     wrap.dataset.value = isWatched ? "true" : "false";
@@ -1792,7 +1877,6 @@
     document.getElementById("toggleManualImportBtn").textContent = "Importar manualmente ▾";
     importOverlay.classList.add("open");
   }
-  document.getElementById("importBtn").addEventListener("click", openImportModal);
   document.getElementById("importFromMovieModalBtn").addEventListener("click", openImportModal);
   document.getElementById("cancelImportBtn").addEventListener("click", ()=> importOverlay.classList.remove("open"));
   importOverlay.addEventListener("click", e=>{ if(e.target===importOverlay) importOverlay.classList.remove("open"); });
