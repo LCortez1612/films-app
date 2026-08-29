@@ -128,6 +128,8 @@
   }
   .circle-btn svg{ width:19px; height:19px; }
   #themeToggle{ color:#fff; }
+  .sort-dir-btn svg{ transition:transform .2s ease; }
+  .sort-dir-btn.desc svg{ transform:scaleY(-1); }
   .palette-wrap{ position:relative; }
   .palette-circle{ border:2px solid var(--border); }
   .palette-menu{
@@ -278,7 +280,7 @@
   .star{ width:15px; height:15px; cursor:pointer; }
   .score-nums{ display:flex; align-items:center; gap:6px; flex-shrink:0; margin-left:auto; }
   .score-num{ font-size:12px; color:var(--muted); white-space:nowrap; }
-  .imdb-badge{ font-size:11px; font-weight:600; color:#000; background:#F5C518; padding:2px 6px; border-radius:3px; }
+  .imdb-badge{ font-size:11px; font-weight:600; color:#fff; background:#F5C518; padding:2px 6px; border-radius:3px; }
 
   .card-actions{
     display:flex; border-top:var(--card-border); background:var(--surface-2);
@@ -369,6 +371,10 @@
   .checks{ display:flex; gap:16px; margin-bottom:14px; }
   .checks label{ font-size:13px; display:flex; align-items:center; gap:6px; }
   .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+  #movieOverlay .modal-actions{
+    position:sticky; bottom:-22px; margin:16px -22px -22px; padding:12px 22px;
+    background:var(--surface); border-top:var(--card-border); z-index:5;
+  }
   .btn{
     padding:9px 16px; border-radius:8px; border:var(--card-border); background:var(--surface-2); color:var(--text); font-size:13px;
   }
@@ -470,6 +476,15 @@
         <button class="icon-btn" id="orderBtn">Ordenar ▾</button>
         <div class="order-menu" id="orderMenu"></div>
       </div>
+      <button class="circle-btn sort-dir-btn" id="sortDirBtn" type="button" title="Orden ascendente" aria-label="Orden ascendente">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="7" y1="3" x2="7" y2="19"></line>
+          <polyline points="3 15 7 19 11 15"></polyline>
+          <line x1="13" y1="5" x2="21" y2="5"></line>
+          <line x1="13" y1="10" x2="19" y2="10"></line>
+          <line x1="13" y1="15" x2="17" y2="15"></line>
+        </svg>
+      </button>
       <button class="icon-btn" id="viewToggleBtn" title="Cambiar a vista de lista compacta">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
         <span id="viewToggleLabel">Lista</span>
@@ -562,6 +577,7 @@
     </div>
 
     <div class="modal-actions">
+      <button class="btn" id="importFromMovieModalBtn" style="margin-right:auto;">Importar</button>
       <button class="btn danger" id="deleteMovieBtn" style="display:none;">Eliminar</button>
       <button class="btn" id="cancelMovieBtn">Cancelar</button>
       <button class="btn primary" id="saveMovieBtn">Guardar</button>
@@ -688,7 +704,8 @@
     durationFilter: null,
     watchedFilter: null,
     compactView: false,
-    posterLang: "es"
+    posterLang: "es",
+    sortDirection: "asc"
   });
   ALL_SORT_IDS.forEach(id=>{ if(!ui.tabOrder.includes(id)) ui.tabOrder.push(id); });
 
@@ -998,17 +1015,20 @@
   document.getElementById("searchInput").addEventListener("input", renderAll);
 
   const pageJumpBtn = document.getElementById("pageJumpBtn");
-  function isAtPageBottom(){
-    return window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10;
+  function isFavoritesVisible(){
+    const el = document.getElementById("favToggleBtn");
+    if(!el) return true;
+    const rect = el.getBoundingClientRect();
+    return rect.bottom > 0 && rect.top < window.innerHeight;
   }
   function updatePageJumpButton(){
-    const atBottom = isAtPageBottom();
-    pageJumpBtn.classList.toggle("at-bottom", atBottom);
-    pageJumpBtn.setAttribute("aria-label", atBottom ? "Ir al inicio" : "Ir al final");
-    pageJumpBtn.title = atBottom ? "Ir al inicio" : "Ir al final";
+    const goingDown = isFavoritesVisible();
+    pageJumpBtn.classList.toggle("at-bottom", !goingDown);
+    pageJumpBtn.setAttribute("aria-label", goingDown ? "Ir al final" : "Ir al inicio");
+    pageJumpBtn.title = goingDown ? "Ir al final" : "Ir al inicio";
   }
   pageJumpBtn.addEventListener("click", ()=>{
-    window.scrollTo({ top: isAtPageBottom() ? 0 : document.documentElement.scrollHeight, behavior:"smooth" });
+    window.scrollTo({ top: isFavoritesVisible() ? document.documentElement.scrollHeight : 0, behavior:"smooth" });
   });
   window.addEventListener("scroll", updatePageJumpButton, { passive:true });
   window.addEventListener("resize", updatePageJumpButton);
@@ -1204,6 +1224,7 @@
     }
 
     const mode = ui.activeTab;
+    const dirMul = ui.sortDirection === "desc" ? -1 : 1;
 
     if(mode === "libre"){
       renderShelf(list);
@@ -1211,18 +1232,18 @@
     }
 
     if(mode === "alfabetico"){
-      const sorted = [...list].sort((a,b)=> titleOf(a).localeCompare(titleOf(b),'es'));
+      const sorted = [...list].sort((a,b)=> dirMul * titleOf(a).localeCompare(titleOf(b),'es'));
       main.appendChild(buildViewContainer(sorted));
       return;
     }
     if(mode === "duracion"){
-      const sorted = [...list].sort((a,b)=> (a.duration||0)-(b.duration||0));
+      const sorted = [...list].sort((a,b)=> dirMul * ((a.duration||0)-(b.duration||0)));
       main.appendChild(buildViewContainer(sorted));
       return;
     }
     if(mode === "genero"){
       if(ui.genreFilter){
-        const sorted = [...list].sort((a,b)=> titleOf(a).localeCompare(titleOf(b),'es'));
+        const sorted = [...list].sort((a,b)=> dirMul * titleOf(a).localeCompare(titleOf(b),'es'));
         main.appendChild(buildViewContainer(sorted));
         return;
       }
@@ -1232,7 +1253,7 @@
           groups[g] = groups[g] || []; groups[g].push(m);
         });
       });
-      Object.keys(groups).sort().forEach(g=>{
+      Object.keys(groups).sort((a,b)=> dirMul * a.localeCompare(b,'es')).forEach(g=>{
         main.appendChild(buildGroup(g, groups[g]));
       });
       return;
@@ -1244,31 +1265,32 @@
           groups[a] = groups[a] || []; groups[a].push(m);
         });
       });
-      Object.keys(groups).sort().forEach(a=>{
+      Object.keys(groups).sort((a,b)=> dirMul * a.localeCompare(b,'es')).forEach(a=>{
         main.appendChild(buildGroup(a, groups[a]));
       });
       return;
     }
     if(mode === "vista"){
       if(ui.watchedFilter){
-        const sorted = [...list].sort((a,b)=> titleOf(a).localeCompare(titleOf(b),'es'));
+        const sorted = [...list].sort((a,b)=> dirMul * titleOf(a).localeCompare(titleOf(b),'es'));
         main.appendChild(buildViewContainer(sorted));
         return;
       }
       const groups = { "Vista":[], "No vista":[] };
       list.forEach(m=> groups[m.watched ? "Vista" : "No vista"].push(m));
-      ["Vista","No vista"].forEach(k=>{
+      const order = ui.sortDirection === "desc" ? ["No vista","Vista"] : ["Vista","No vista"];
+      order.forEach(k=>{
         if(groups[k].length) main.appendChild(buildGroup(k, groups[k]));
       });
       return;
     }
     if(mode === "puntaje"){
-      const sorted = [...list].sort((a,b)=> (b.rating10||0) - (a.rating10||0) || titleOf(a).localeCompare(titleOf(b),'es'));
+      const sorted = [...list].sort((a,b)=> dirMul * ((b.rating10||0) - (a.rating10||0)) || titleOf(a).localeCompare(titleOf(b),'es'));
       main.appendChild(buildViewContainer(sorted));
       return;
     }
     if(mode === "fechaentrada"){
-      const sorted = [...list].sort((a,b)=> (b.addedAt||0) - (a.addedAt||0));
+      const sorted = [...list].sort((a,b)=> dirMul * ((b.addedAt||0) - (a.addedAt||0)));
       main.appendChild(buildViewContainer(sorted));
       return;
     }
@@ -1669,6 +1691,21 @@
       btn.classList.toggle("active", btn.dataset.val === wrap.dataset.value);
     });
   }
+  const sortDirBtn = document.getElementById("sortDirBtn");
+  function updateSortDirBtn(){
+    const isDesc = ui.sortDirection === "desc";
+    sortDirBtn.classList.toggle("desc", isDesc);
+    sortDirBtn.title = isDesc ? "Orden descendente" : "Orden ascendente";
+    sortDirBtn.setAttribute("aria-label", isDesc ? "Orden descendente" : "Orden ascendente");
+  }
+  sortDirBtn.addEventListener("click", ()=>{
+    ui.sortDirection = ui.sortDirection === "desc" ? "asc" : "desc";
+    saveUI();
+    updateSortDirBtn();
+    renderAll();
+  });
+  updateSortDirBtn();
+
   document.getElementById("watchedSegment").addEventListener("click", (e)=>{
     const btn = e.target.closest(".seg-btn");
     if(!btn) return;
@@ -1749,12 +1786,14 @@
   });
 
   const importOverlay = document.getElementById("importOverlay");
-  document.getElementById("importBtn").addEventListener("click", ()=>{
+  function openImportModal(){
     document.getElementById("importText").value = "";
     document.getElementById("manualImportSection").style.display = "none";
     document.getElementById("toggleManualImportBtn").textContent = "Importar manualmente ▾";
     importOverlay.classList.add("open");
-  });
+  }
+  document.getElementById("importBtn").addEventListener("click", openImportModal);
+  document.getElementById("importFromMovieModalBtn").addEventListener("click", openImportModal);
   document.getElementById("cancelImportBtn").addEventListener("click", ()=> importOverlay.classList.remove("open"));
   importOverlay.addEventListener("click", e=>{ if(e.target===importOverlay) importOverlay.classList.remove("open"); });
 
