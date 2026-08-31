@@ -335,7 +335,7 @@
   .info-btn span{
     display:inline-flex; align-items:center; justify-content:center;
     width:16px; height:16px; border-radius:50%; border:1.5px solid currentColor;
-    font-size:11px; font-style:italic; font-family:var(--font-body); line-height:1;
+    font-size:11px; font-style:normal; font-family:var(--font-body); line-height:1;
   }
 
   .watched-flag{
@@ -820,20 +820,6 @@
   const ALL_SORT_IDS = Object.keys(SORT_LABELS);
 
   let movies = load(STORE_KEY, []);
-
-  if(movies.length === 0 && !localStorage.getItem("cineteca_seeded_v1")){
-    movies = [
-      { id: uid(), titleEs:"Green Book", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null, posterPosition:"top" },
-      { id: uid(), titleEs:"Portrait of a lady on fire", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:false, favorite:false, poster:null, posterPosition:"top" },
-      { id: uid(), titleEs:"Antes de partir", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:false, favorite:false, poster:null, posterPosition:"top" },
-      { id: uid(), titleEs:"Old Boy", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:false, favorite:false, poster:null, posterPosition:"top" },
-      { id: uid(), titleEs:"Forest Gump", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null, posterPosition:"top" },
-      { id: uid(), titleEs:"Taxi Driver", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null, posterPosition:"top" },
-      { id: uid(), titleEs:"The Grand Budapest Hotel", titleEn:"", director:"", actors:[], genres:[], year:null, duration:null, imdb:null, connections:[], rating10:0, watched:true, favorite:false, poster:null, posterPosition:"top" }
-    ];
-    localStorage.setItem(STORE_KEY, JSON.stringify(movies));
-    localStorage.setItem("cineteca_seeded_v1", "1");
-  }
   let ui = loadWithDefaults(UI_KEY, {
     theme: "nordico",
     palette: "vino",
@@ -1198,15 +1184,7 @@
     const otherFields = [m.titleEs, m.titleEn, m.director, ...(m.genres||[])]
       .filter(Boolean).join(" ").toLowerCase();
     if(otherFields.includes(q)) return true;
-
-    const qWords = q.split(/\s+/).filter(Boolean);
-    return (m.actors||[]).some(actor=>{
-      const actorLower = String(actor).toLowerCase();
-      if(actorLower === q) return true;
-      const actorWords = actorLower.split(/\s+/).filter(Boolean);
-      // cada palabra buscada debe coincidir exactamente con alguna palabra del nombre del actor
-      return qWords.every(qw=> actorWords.some(aw=> aw === qw));
-    });
+    return (m.actors||[]).some(actor=> String(actor).toLowerCase().includes(q));
   }
 
   function starSVG(fill){
