@@ -1394,9 +1394,16 @@
       return;
     }
     if(mode === "actor"){
+      const q = document.getElementById("searchInput").value.trim().toLowerCase();
       const groups = {};
       list.forEach(m=>{
-        (m.actors && m.actors.length ? m.actors : ["Sin actores cargados"]).forEach(a=>{
+        const actorsList = (m.actors && m.actors.length) ? m.actors : ["Sin actores cargados"];
+        const matchingActors = q ? actorsList.filter(a=> String(a).toLowerCase().includes(q)) : [];
+        // si el texto buscado matchea a un actor puntual, esa película solo agrupa bajo ese actor
+        // (evita que compañeros de reparto aparezcan como grupos separados sin motivo)
+        // si no matchea a ningún actor (matcheó por título/director/género), agrupa bajo todos como siempre
+        const targetActors = matchingActors.length ? matchingActors : actorsList;
+        targetActors.forEach(a=>{
           groups[a] = groups[a] || []; groups[a].push(m);
         });
       });
