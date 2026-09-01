@@ -66,28 +66,13 @@
     --card-radius: 22px; --card-border: none;
     --card-shadow: var(--neu-shadow-raised);
     --tab-radius: 18px;
-  }
-  [data-theme="normal"][data-palette="vino"]{
-    --neu-light:#6a3947; --neu-dark:#210610;
     --neu-shadow-raised: -7px -7px 14px var(--neu-light), 7px 7px 14px var(--neu-dark);
     --neu-shadow-inset: inset -5px -5px 10px var(--neu-light), inset 5px 5px 10px var(--neu-dark);
     --neu-shadow-soft: -4px -4px 8px var(--neu-light), 4px 4px 8px var(--neu-dark);
-    --neu-icon: #b98b96;
   }
-  [data-theme="normal"][data-palette="byn"]{
-    --neu-light:#2c2c2c; --neu-dark:#000000;
-    --neu-shadow-raised: -7px -7px 14px var(--neu-light), 7px 7px 14px var(--neu-dark);
-    --neu-shadow-inset: inset -5px -5px 10px var(--neu-light), inset 5px 5px 10px var(--neu-dark);
-    --neu-shadow-soft: -4px -4px 8px var(--neu-light), 4px 4px 8px var(--neu-dark);
-    --neu-icon: #8f96a3;
-  }
-  [data-theme="normal"][data-palette="morado1"]{
-    --neu-light:#533472; --neu-dark:#14031f;
-    --neu-shadow-raised: -7px -7px 14px var(--neu-light), 7px 7px 14px var(--neu-dark);
-    --neu-shadow-inset: inset -5px -5px 10px var(--neu-light), inset 5px 5px 10px var(--neu-dark);
-    --neu-shadow-soft: -4px -4px 8px var(--neu-light), 4px 4px 8px var(--neu-dark);
-    --neu-icon: #a99bc4;
-  }
+  [data-theme="normal"][data-palette="vino"]{ --neu-light:#6a3947; --neu-dark:#210610; --neu-icon:#b98b96; }
+  [data-theme="normal"][data-palette="byn"]{ --neu-light:#2c2c2c; --neu-dark:#000000; --neu-icon:#8f96a3; }
+  [data-theme="normal"][data-palette="morado1"]{ --neu-light:#533472; --neu-dark:#14031f; --neu-icon:#a99bc4; }
 
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
@@ -317,7 +302,6 @@
   [data-theme="pixel"] .pill{ border-radius:0; }
   .stars{ display:flex; flex-shrink:0; }
   .star{ width:15px; height:15px; cursor:pointer; }
-  .score-nums{ display:flex; align-items:center; gap:6px; flex-shrink:0; margin-left:auto; }
   .score-num{ font-size:12px; color:var(--muted); white-space:nowrap; }
   .imdb-badge{ font-size:11px; font-weight:600; color:var(--on-accent); background:var(--accent); padding:2px 6px; border-radius:3px; }
 
@@ -450,8 +434,6 @@
   }
   [data-theme="pixel"] .fab{ border-radius:0; border:2px solid var(--border); }
 
-  .api-keys-fab{ position:fixed; left:22px; bottom:22px; }
-  [data-theme="nordico"] .api-keys-fab.circle-btn{ box-shadow:var(--shadow); }
   .api-keys-link{ background:none; border:none; color:var(--muted); font-size:11px; text-decoration:underline; padding:4px 0; }
   .api-keys-link:hover{ color:var(--accent); }
 
@@ -1376,25 +1358,28 @@
 
     document.getElementById("viewToggleBtn").style.display = mode === "libre" ? "none" : "";
 
+    function sortAndRender(compareFn){
+      const sorted = [...list].sort(compareFn);
+      main.appendChild(buildViewContainer(sorted));
+    }
+    const alphaCompare = (a,b)=> dirMul * titleOf(a).localeCompare(titleOf(b),'es');
+
     if(mode === "libre"){
       renderShelf(list);
       return;
     }
 
     if(mode === "alfabetico"){
-      const sorted = [...list].sort((a,b)=> dirMul * titleOf(a).localeCompare(titleOf(b),'es'));
-      main.appendChild(buildViewContainer(sorted));
+      sortAndRender(alphaCompare);
       return;
     }
     if(mode === "duracion"){
-      const sorted = [...list].sort((a,b)=> dirMul * ((a.duration||0)-(b.duration||0)));
-      main.appendChild(buildViewContainer(sorted));
+      sortAndRender((a,b)=> dirMul * ((a.duration||0)-(b.duration||0)));
       return;
     }
     if(mode === "genero"){
       if(ui.genreFilter){
-        const sorted = [...list].sort((a,b)=> dirMul * titleOf(a).localeCompare(titleOf(b),'es'));
-        main.appendChild(buildViewContainer(sorted));
+        sortAndRender(alphaCompare);
         return;
       }
       const groups = {};
@@ -1422,8 +1407,7 @@
     }
     if(mode === "vista"){
       if(ui.watchedFilter){
-        const sorted = [...list].sort((a,b)=> dirMul * titleOf(a).localeCompare(titleOf(b),'es'));
-        main.appendChild(buildViewContainer(sorted));
+        sortAndRender(alphaCompare);
         return;
       }
       const groups = { "Vista":[], "No vista":[] };
@@ -1435,13 +1419,11 @@
       return;
     }
     if(mode === "puntaje"){
-      const sorted = [...list].sort((a,b)=> dirMul * ((b.rating10||0) - (a.rating10||0)) || titleOf(a).localeCompare(titleOf(b),'es'));
-      main.appendChild(buildViewContainer(sorted));
+      sortAndRender((a,b)=> dirMul * ((b.rating10||0) - (a.rating10||0)) || titleOf(a).localeCompare(titleOf(b),'es'));
       return;
     }
     if(mode === "fechaentrada"){
-      const sorted = [...list].sort((a,b)=> dirMul * ((b.addedAt||0) - (a.addedAt||0)));
-      main.appendChild(buildViewContainer(sorted));
+      sortAndRender((a,b)=> dirMul * ((b.addedAt||0) - (a.addedAt||0)));
       return;
     }
   }
@@ -1652,6 +1634,48 @@
     document.getElementById("autofillStatus").textContent = msg;
   }
 
+  async function fetchTmdbMovieData(keys, title, year){
+    const searchUrl = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(title)}${year ? "&year="+encodeURIComponent(year) : ""}&language=es-ES&api_key=${encodeURIComponent(keys.tmdb)}`;
+    const searchRes = await fetch(searchUrl);
+    if(!searchRes.ok) throw new Error("tmdb_search_failed");
+    const searchData = await searchRes.json();
+    if(!searchData.results || searchData.results.length === 0) return null;
+    const basic = searchData.results[0];
+
+    const [esRes, enRes] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/movie/${basic.id}?language=es-ES&append_to_response=credits&api_key=${encodeURIComponent(keys.tmdb)}`),
+      fetch(`https://api.themoviedb.org/3/movie/${basic.id}?language=en-US&api_key=${encodeURIComponent(keys.tmdb)}`)
+    ]);
+    if(!esRes.ok || !enRes.ok) throw new Error("tmdb_details_failed");
+    const esData = await esRes.json();
+    const enData = await enRes.json();
+    return { esData, enData };
+  }
+
+  async function fetchTmdbCollectionTitles(keys, esData){
+    if(!esData.belongs_to_collection) return [];
+    try{
+      const colRes = await fetch(`https://api.themoviedb.org/3/collection/${esData.belongs_to_collection.id}?language=es-ES&api_key=${encodeURIComponent(keys.tmdb)}`);
+      if(!colRes.ok) return [];
+      const colData = await colRes.json();
+      return (colData.parts||[]).filter(p=>p.id!==esData.id).map(p=>p.title);
+    }catch(err){ return []; }
+  }
+
+  async function fetchImdbRating(keys, imdbId){
+    if(!keys.omdb || !imdbId) return null;
+    try{
+      const omdbRes = await fetch(`https://www.omdbapi.com/?i=${imdbId}&apikey=${encodeURIComponent(keys.omdb)}`);
+      const omdbData = await omdbRes.json();
+      if(omdbData.imdbRating && omdbData.imdbRating !== "N/A") return parseFloat(omdbData.imdbRating);
+      return null;
+    }catch(err){ return null; }
+  }
+
+  function pickPosterSource(esData, enData){
+    return ui.posterLang === "en" && enData.poster_path ? enData : esData;
+  }
+
   async function runAutofill(){
     const keys = loadApiKeys();
     if(!keys.tmdb){
@@ -1664,23 +1688,12 @@
 
     setAutofillStatus("Buscando...");
     try{
-      const searchUrl = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(query)}${yearHint ? "&year="+encodeURIComponent(yearHint) : ""}&language=es-ES&api_key=${encodeURIComponent(keys.tmdb)}`;
-      const searchRes = await fetch(searchUrl);
-      if(!searchRes.ok) throw new Error("tmdb_search_failed");
-      const searchData = await searchRes.json();
-      if(!searchData.results || searchData.results.length === 0){
+      const result = await fetchTmdbMovieData(keys, query, yearHint);
+      if(!result){
         setAutofillStatus("No se encontró en TMDB.");
         return;
       }
-      const basic = searchData.results[0];
-
-      const [esRes, enRes] = await Promise.all([
-        fetch(`https://api.themoviedb.org/3/movie/${basic.id}?language=es-ES&append_to_response=credits&api_key=${encodeURIComponent(keys.tmdb)}`),
-        fetch(`https://api.themoviedb.org/3/movie/${basic.id}?language=en-US&api_key=${encodeURIComponent(keys.tmdb)}`)
-      ]);
-      if(!esRes.ok || !enRes.ok) throw new Error("tmdb_details_failed");
-      const esData = await esRes.json();
-      const enData = await enRes.json();
+      const { esData, enData } = result;
 
       document.getElementById("f_titleEs").value = esData.title || "";
       document.getElementById("f_titleEn").value = enData.title || "";
@@ -1690,7 +1703,7 @@
       document.getElementById("f_actors").value = (esData.credits?.cast||[]).slice(0,6).map(a=>a.name).join(", ");
       document.getElementById("f_genres").value = (esData.genres||[]).map(g=>g.name).join(", ");
 
-      const posterSourceData = ui.posterLang === "en" && enData.poster_path ? enData : esData;
+      const posterSourceData = pickPosterSource(esData, enData);
       if(posterSourceData.poster_path){
         setAutofillStatus("Descargando portada...");
         try{
@@ -1700,26 +1713,15 @@
         }catch(err){ }
       }
 
-      if(esData.belongs_to_collection){
-        try{
-          const colRes = await fetch(`https://api.themoviedb.org/3/collection/${esData.belongs_to_collection.id}?language=es-ES&api_key=${encodeURIComponent(keys.tmdb)}`);
-          if(colRes.ok){
-            const colData = await colRes.json();
-            const others = (colData.parts||[]).filter(p=>p.id!==esData.id).map(p=>p.title);
-            document.getElementById("f_connections").value = others.join(", ");
-          }
-        }catch(err){ }
+      const collectionTitles = await fetchTmdbCollectionTitles(keys, esData);
+      if(collectionTitles.length){
+        document.getElementById("f_connections").value = collectionTitles.join(", ");
       }
 
       if(keys.omdb && esData.imdb_id){
         setAutofillStatus("Buscando puntaje IMDb...");
-        try{
-          const omdbRes = await fetch(`https://www.omdbapi.com/?i=${esData.imdb_id}&apikey=${encodeURIComponent(keys.omdb)}`);
-          const omdbData = await omdbRes.json();
-          if(omdbData.imdbRating && omdbData.imdbRating !== "N/A"){
-            document.getElementById("f_imdb").value = omdbData.imdbRating;
-          }
-        }catch(err){ }
+        const rating = await fetchImdbRating(keys, esData.imdb_id);
+        if(rating !== null) document.getElementById("f_imdb").value = rating;
       }
 
       setAutofillStatus("Listo. Revisá los datos antes de guardar.");
@@ -1759,23 +1761,9 @@
       }
 
       try{
-        const searchUrl = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(title)}${year ? "&year="+encodeURIComponent(year) : ""}&language=es-ES&api_key=${encodeURIComponent(keys.tmdb)}`;
-        const searchRes = await fetch(searchUrl);
-        if(!searchRes.ok) throw new Error("search_failed");
-        const searchData = await searchRes.json();
-        if(!searchData.results || searchData.results.length === 0){
-          notFound.push(line);
-          continue;
-        }
-        const basic = searchData.results[0];
-
-        const [esRes, enRes] = await Promise.all([
-          fetch(`https://api.themoviedb.org/3/movie/${basic.id}?language=es-ES&append_to_response=credits&api_key=${encodeURIComponent(keys.tmdb)}`),
-          fetch(`https://api.themoviedb.org/3/movie/${basic.id}?language=en-US&api_key=${encodeURIComponent(keys.tmdb)}`)
-        ]);
-        if(!esRes.ok || !enRes.ok) throw new Error("details_failed");
-        const esData = await esRes.json();
-        const enData = await enRes.json();
+        const result = await fetchTmdbMovieData(keys, title, year);
+        if(!result){ notFound.push(line); continue; }
+        const { esData, enData } = result;
 
         const candidate = {
           titleEs: esData.title || "",
@@ -1793,30 +1781,15 @@
         if(dup){ repeated.push(candidate.titleEs || candidate.titleEn || line); continue; }
 
         let poster = null;
-        const batchPosterSource = ui.posterLang === "en" && enData.poster_path ? enData : esData;
+        const batchPosterSource = pickPosterSource(esData, enData);
         if(batchPosterSource.poster_path){
           try{ poster = await urlToDataUrl("https://image.tmdb.org/t/p/w780" + batchPosterSource.poster_path); }
           catch(err){ }
         }
 
-        let connectionsRaw = [];
-        if(esData.belongs_to_collection){
-          try{
-            const colRes = await fetch(`https://api.themoviedb.org/3/collection/${esData.belongs_to_collection.id}?language=es-ES&api_key=${encodeURIComponent(keys.tmdb)}`);
-            if(colRes.ok){
-              const colData = await colRes.json();
-              connectionsRaw = (colData.parts||[]).filter(p=>p.id!==esData.id).map(p=>p.title);
-            }
-          }catch(err){ }
-        }
-
-        if(keys.omdb && esData.imdb_id){
-          try{
-            const omdbRes = await fetch(`https://www.omdbapi.com/?i=${esData.imdb_id}&apikey=${encodeURIComponent(keys.omdb)}`);
-            const omdbData = await omdbRes.json();
-            if(omdbData.imdbRating && omdbData.imdbRating !== "N/A") candidate.imdb = parseFloat(omdbData.imdbRating);
-          }catch(err){ }
-        }
+        const connectionsRaw = await fetchTmdbCollectionTitles(keys, esData);
+        const imdbRating = await fetchImdbRating(keys, esData.imdb_id);
+        if(imdbRating !== null) candidate.imdb = imdbRating;
 
         const movie = Object.assign({
           id: uid(),
