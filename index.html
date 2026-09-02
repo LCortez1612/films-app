@@ -1208,6 +1208,7 @@
         const newVal = isLeftHalf ? (i-0.5)*2 : i*2;
         document.getElementById("f_rating10").value = newVal;
         renderRatingEditor(newVal);
+        if(newVal > 0) setWatchedSegment(true);
       });
       wrap.appendChild(cell);
     }
@@ -1217,6 +1218,7 @@
     if(isNaN(v)) v = 0;
     v = Math.max(0, Math.min(10, v));
     renderRatingEditor(v);
+    if(v > 0) setWatchedSegment(true);
   });
 
   function findById(id){ return movies.find(m=>m.id===id); }
